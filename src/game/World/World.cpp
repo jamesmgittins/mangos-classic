@@ -369,7 +369,10 @@ void World::LoadConfigSettings(bool reload)
 
     ///- Read all rates from the config file
     setConfigPos(CONFIG_FLOAT_RATE_HEALTH,                               "Rate.Health",                               1.0f);
+	setConfig(	 CONFIG_BOOL_HEALTH_REGEN_IN_COMBAT,					 "Rate.Health.In.Combat",					  false);
+	setConfig(	 CONFIG_BOOL_CONSUME_AMMO,								 "Rate.Consume.Ammo",						  true);
     setConfigPos(CONFIG_FLOAT_RATE_POWER_MANA,                           "Rate.Mana",                                 1.0f);
+	setConfigPos(CONFIG_FLOAT_RATE_MANA_CASTING_DELAY,					 "Rate.Mana.Casting.Delay",					  5.0f);
     setConfigPos(CONFIG_FLOAT_RATE_POWER_RAGE_INCOME,                    "Rate.Rage.Income",                          1.0f);
     setConfigPos(CONFIG_FLOAT_RATE_POWER_RAGE_LOSS,                      "Rate.Rage.Loss",                            1.0f);
     setConfigPos(CONFIG_FLOAT_RATE_POWER_FOCUS,                          "Rate.Focus",                                1.0f);
@@ -507,6 +510,8 @@ void World::LoadConfigSettings(bool reload)
 
     // must be after CONFIG_UINT32_CHARACTERS_PER_REALM
     setConfigMin(CONFIG_UINT32_CHARACTERS_PER_ACCOUNT, "CharactersPerAccount", 50, getConfig(CONFIG_UINT32_CHARACTERS_PER_REALM));
+
+	setConfig(CONFIG_UINT32_TALENT_PLAYER_LEVEL, "TalentPlayerLevel", 10);
 
     setConfigMinMax(CONFIG_UINT32_SKIP_CINEMATICS, "SkipCinematics", 0, 0, 2);
 

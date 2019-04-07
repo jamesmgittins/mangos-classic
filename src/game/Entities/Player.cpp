@@ -2100,10 +2100,10 @@ void Player::RegenerateAll()
 {
     if (m_regenTimer != 0)
         return;
-
+	
     // Not in combat or they have regeneration
     if (!isInCombat() || HasAuraType(SPELL_AURA_MOD_REGEN_DURING_COMBAT) ||
-            HasAuraType(SPELL_AURA_MOD_HEALTH_REGEN_IN_COMBAT))
+            HasAuraType(SPELL_AURA_MOD_HEALTH_REGEN_IN_COMBAT) || sWorld.getConfig(CONFIG_BOOL_HEALTH_REGEN_IN_COMBAT))
     {
         RegenerateHealth();
         if (!isInCombat() && !HasAuraType(SPELL_AURA_INTERRUPT_REGEN))
@@ -2133,22 +2133,22 @@ void Player::Regenerate(Powers power)
             if (recentCast)
             {
                 // Mangos Updates Mana in intervals of 2s, which is correct
-                addvalue = m_modManaRegenInterrupt *  ManaIncreaseRate * 2.00f;
+                addvalue = m_modManaRegenInterrupt *  ManaIncreaseRate * 0.50f;
             }
             else
             {
-                addvalue = m_modManaRegen * ManaIncreaseRate * 2.00f;
+                addvalue = m_modManaRegen * ManaIncreaseRate * 0.50f;
             }
         }   break;
         case POWER_RAGE:                                    // Regenerate rage
         {
             float RageDecreaseRate = sWorld.getConfig(CONFIG_FLOAT_RATE_POWER_RAGE_LOSS);
-            addvalue = 20 * RageDecreaseRate;               // 2 rage by tick (= 2 seconds => 1 rage/sec)
+            addvalue = 20 * RageDecreaseRate / 4;               // 2 rage by tick (= 2 seconds => 1 rage/sec)
         }   break;
         case POWER_ENERGY:                                  // Regenerate energy (rogue)
         {
             float EnergyRate = sWorld.getConfig(CONFIG_FLOAT_RATE_POWER_ENERGY);
-            addvalue = 20 * EnergyRate;
+            addvalue = 20 * EnergyRate / 4;
             break;
         }
         case POWER_FOCUS:
@@ -2195,7 +2195,7 @@ void Player::RegenerateHealth()
     float addvalue = 0.0f;
 
     // normal regen case (maybe partly in combat case)
-    if (!isInCombat() || HasAuraType(SPELL_AURA_MOD_REGEN_DURING_COMBAT))
+    if (!isInCombat() || HasAuraType(SPELL_AURA_MOD_REGEN_DURING_COMBAT) || sWorld.getConfig(CONFIG_BOOL_HEALTH_REGEN_IN_COMBAT))
     {
         addvalue = OCTRegenHPPerSpirit() * HealthIncreaseRate;
         if (!isInCombat())
@@ -2217,7 +2217,7 @@ void Player::RegenerateHealth()
     if (addvalue < 0)
         addvalue = 0;
 
-    ModifyHealth(int32(addvalue));
+    ModifyHealth(int32(addvalue / 4));
 }
 
 Creature* Player::GetNPCIfCanInteractWith(ObjectGuid guid, uint32 npcflagmask)
@@ -2555,7 +2555,7 @@ void Player::UpdateFreeTalentPoints(bool resetIfNeed)
 {
     uint32 level = getLevel();
     // talents base at level diff ( talents = level - 9 but some can be used already)
-    if (level < 10)
+    if (level < sWorld.getConfig(CONFIG_UINT32_TALENT_PLAYER_LEVEL))
     {
         // Remove all talent points
         if (m_usedTalentCount > 0)                          // Free any used talents
@@ -18804,7 +18804,7 @@ Item* Player::ConvertItem(Item* item, uint32 newItemId)
 
 uint32 Player::CalculateTalentsPoints() const
 {
-    uint32 talentPointsForLevel = getLevel() < 10 ? 0 : getLevel() - 9;
+    uint32 talentPointsForLevel = getLevel() < sWorld.getConfig(CONFIG_UINT32_TALENT_PLAYER_LEVEL) ? 0 : getLevel() - (sWorld.getConfig(CONFIG_UINT32_TALENT_PLAYER_LEVEL) - 1);
     return uint32(talentPointsForLevel * sWorld.getConfig(CONFIG_FLOAT_RATE_TALENT));
 }
 

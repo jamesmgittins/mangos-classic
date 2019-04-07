@@ -154,6 +154,7 @@ struct CreatureInfo
     uint32  civilian;
     char const* AIName;
     uint32  ScriptID;
+	bool bonusLoot;
 
     // helpers
     static HighGuid GetHighGuid()
@@ -913,7 +914,7 @@ class Creature : public Unit
 
     private:
         GridReference<Creature> m_gridRef;
-        CreatureInfo const* m_creatureInfo;
+        CreatureInfo *m_creatureInfo;
 };
 
 class ForcedDespawnDelayEvent : public BasicEvent

@@ -533,6 +533,10 @@ LogColors = ""
 #        Change not recommended
 #        Default: 60
 #
+#    TalentPlayerLevel
+#        Level that players start earning talent MaxHonorPoints
+#        Default: 10
+#
 #    StartPlayerLevel
 #        Staring level that have character at creating (in range 1 to MaxPlayerLevel)
 #        Default: 1
@@ -755,6 +759,7 @@ CharactersPerAccount = 50
 CharactersPerRealm = 10
 SkipCinematics = 0
 MaxPlayerLevel = 60
+TalentPlayerLevel = 5
 StartPlayerLevel = 1
 StartPlayerMoney = 0
 MaxHonorPoints = 75000
@@ -837,16 +842,16 @@ PlayerCommands = 1
 #
 ###################################################################################################################
 
-AllowTwoSide.Accounts = 0
-AllowTwoSide.Interaction.Chat = 0
-AllowTwoSide.Interaction.Channel = 0
-AllowTwoSide.Interaction.Group = 0
-AllowTwoSide.Interaction.Guild = 0
-AllowTwoSide.Interaction.Trade = 0
-AllowTwoSide.Interaction.Auction = 0
-AllowTwoSide.Interaction.Mail = 0
-AllowTwoSide.WhoList = 0
-AllowTwoSide.AddFriend = 0
+AllowTwoSide.Accounts = 1
+AllowTwoSide.Interaction.Chat = 1
+AllowTwoSide.Interaction.Channel = 1
+AllowTwoSide.Interaction.Group = 1
+AllowTwoSide.Interaction.Guild = 1
+AllowTwoSide.Interaction.Trade = 1
+AllowTwoSide.Interaction.Auction = 1
+AllowTwoSide.Interaction.Mail = 1
+AllowTwoSide.WhoList = 1
+AllowTwoSide.AddFriend = 1
 TalentsInspecting = 1
 
 ###################################################################################################################
@@ -966,7 +971,7 @@ CreatureFamilyAssistanceRadius = 10
 CreatureFamilyAssistanceDelay = 1500
 CreatureFamilyFleeDelay = 7000
 WorldBossLevelDiff = 3
-Corpse.EmptyLootShow = 1
+Corpse.EmptyLootShow = 0
 Corpse.AllowAllItemsShowInMasterLoot = 1
 Corpse.Decay.NORMAL = 300
 Corpse.Decay.RARE = 900
@@ -1196,6 +1201,9 @@ Visibility.AIRelocationNotifyDelay = 1000
 ###################################################################################################################
 # SERVER RATES
 #
+#    Rate.Consume.Ammo
+#       Default: 1 (enabled)
+#                0 (disabled)
 #    Rate.Health
 #    Rate.Mana
 #    Rate.Rage.Income
@@ -1205,6 +1213,12 @@ Visibility.AIRelocationNotifyDelay = 1000
 #    Rate.Energy (Rogue)
 #        Health and power regeneration and rage income from damage.
 #        Default: 1
+#    Rate.Health.In.Combat
+#         Allow health regen in Combat (1 = yes, 0 = no)
+#         Default: 0
+#    Rate.Mana.Casting.Delay
+#         Seconds after casting to begin mana regeneration
+#         Default: 5
 #
 #    Rate.Skill.Discovery
 #         Skill Discovery Rates
@@ -1351,28 +1365,31 @@ Visibility.AIRelocationNotifyDelay = 1000
 #
 ###################################################################################################################
 
-Rate.Health = 1
+Rate.Consume.Ammo = 0
+Rate.Health = 2
+Rate.Health.In.Combat = 1
 Rate.Mana = 1
+Rate.Mana.Casting.Delay = 0
 Rate.Rage.Income = 1
 Rate.Rage.Loss = 1
 Rate.Focus = 1
-Rate.Loyalty = 1
+Rate.Loyalty = 3
 Rate.Energy = 1
-Rate.Skill.Discovery = 1
+Rate.Skill.Discovery = 10
 Rate.Drop.Item.Poor = 1
 Rate.Drop.Item.Normal = 1
-Rate.Drop.Item.Uncommon = 1
-Rate.Drop.Item.Rare = 1
-Rate.Drop.Item.Epic = 1
+Rate.Drop.Item.Uncommon = 10
+Rate.Drop.Item.Rare = 10
+Rate.Drop.Item.Epic = 10
 Rate.Drop.Item.Legendary = 1
 Rate.Drop.Item.Artifact = 1
 Rate.Drop.Item.Referenced = 1
 Rate.Drop.Item.Quest = 1
-Rate.Drop.Money = 1
-Rate.Pet.XP.Kill = 1
-Rate.XP.Kill    = 1
-Rate.XP.Quest   = 1
-Rate.XP.Explore = 1
+Rate.Drop.Money = 15
+Rate.Pet.XP.Kill = 5
+Rate.XP.Kill    = 5
+Rate.XP.Quest   = 5
+Rate.XP.Explore = 5
 Rate.Rest.InGame = 1
 Rate.Rest.Offline.InTavernOrCity = 1
 Rate.Rest.Offline.InWilderness = 1
@@ -1385,14 +1402,14 @@ Rate.Honor = 1
 Rate.Mining.Amount = 1
 Rate.Mining.Next   = 1
 Rate.Talent = 1
-Rate.Reputation.Gain = 1
+Rate.Reputation.Gain = 10
 Rate.Reputation.LowLevel.Kill    = 0.2
 Rate.Reputation.LowLevel.Quest   = 0.2
 Rate.InstanceResetTime = 1
-SkillGain.Crafting = 1
-SkillGain.Defense = 1
-SkillGain.Gathering = 1
-SkillGain.Weapon = 1
+SkillGain.Crafting = 10
+SkillGain.Defense = 10
+SkillGain.Gathering = 10
+SkillGain.Weapon = 10
 SkillChance.Orange = 100
 SkillChance.Yellow = 75
 SkillChance.Green  = 25
@@ -1411,7 +1428,7 @@ Death.CorpseReclaimDelay.PvP = 1
 Death.CorpseReclaimDelay.PvE = 1
 Death.Bones.World = 1
 Death.Bones.Battleground = 1
-Death.Ghost.RunSpeed.World = 1.0
+Death.Ghost.RunSpeed.World = 2.0
 Death.Ghost.RunSpeed.Battleground = 1.0
 
 ###################################################################################################################

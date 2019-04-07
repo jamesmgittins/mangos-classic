@@ -728,7 +728,7 @@ void Pet::RegenerateAll(uint32 update_diff)
     if (m_happinessTimer <= update_diff)
     {
         LooseHappiness();
-        m_happinessTimer = 7500;
+        m_happinessTimer = 30000;
     }
     else
         m_happinessTimer -= update_diff;

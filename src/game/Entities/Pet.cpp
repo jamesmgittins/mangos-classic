@@ -56,7 +56,7 @@ Pet::Pet(PetType type) :
     m_petModeFlags(PET_MODE_DEFAULT), m_originalCharminfo(nullptr)
 {
     m_name = "Pet";
-    m_regenTimer = 4000;
+    m_regenTimer = 500;
 
     // pets always have a charminfo, even if they are not actually charmed
     InitCharmInfo(this);
@@ -717,7 +717,7 @@ void Pet::RegenerateAll(uint32 update_diff)
 
         RegeneratePower();
 
-        m_regenTimer = 4000;
+        m_regenTimer = 500;
     }
     else
         m_regenTimer -= update_diff;

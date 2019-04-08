@@ -7129,7 +7129,7 @@ void Player::UpdateEquipSpellsAtFormChange()
 
 void Player::CastItemCombatSpell(Unit* Target, WeaponAttackType attType, bool spellProc)
 {
-    Item* item = GetWeaponForAttack(attType, true, true);
+    Item* item = GetWeaponForAttack(attType, true, false);
     if (!item)
         return;
 

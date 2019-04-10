@@ -4882,15 +4882,15 @@ float Player::OCTRegenHPPerSpirit() const
 
     switch (Class)
     {
-        case CLASS_DRUID:   regen = (Spirit * 0.11 + 1);    break;
-        case CLASS_HUNTER:  regen = (Spirit * 0.43 - 5.5);  break;
-        case CLASS_MAGE:    regen = (Spirit * 0.11 + 1);    break;
-        case CLASS_PALADIN: regen = (Spirit * 0.25);        break;
-        case CLASS_PRIEST:  regen = (Spirit * 0.15 + 1.4);  break;
-        case CLASS_ROGUE:   regen = (Spirit * 0.84 - 13);   break;
-        case CLASS_SHAMAN:  regen = (Spirit * 0.28 - 3.6);  break;
-        case CLASS_WARLOCK: regen = (Spirit * 0.12 + 1.5);  break;
-        case CLASS_WARRIOR: regen = (Spirit * 1.26 - 22.6); break;
+        case CLASS_MAGE:
+		case CLASS_WARLOCK:
+        case CLASS_PRIEST:  regen = (Spirit * 0.15 + 3);  break;
+		case CLASS_SHAMAN:
+		case CLASS_DRUID:
+		case CLASS_HUNTER:
+		case CLASS_ROGUE:
+		case CLASS_WARRIOR:
+		case CLASS_PALADIN: regen = (Spirit * 0.20 + 3);  break;
     }
 
     return regen;
@@ -5096,6 +5096,10 @@ bool Player::UpdateSkillPro(uint16 SkillId, int32 Chance, uint16 diff)
             skillStatus.uState = SKILL_CHANGED;
 
         DEBUG_LOG("Player::UpdateSkillPro Chance=%3.1f%% taken", Chance / 10.0);
+
+		if(sWorld.getConfig(CONFIG_UINT32_SKILL_GAIN_XP_REWARD) > 0)
+			GiveXP(sWorld.getConfig(CONFIG_UINT32_SKILL_GAIN_XP_REWARD), nullptr);
+
         return true;
     }
 

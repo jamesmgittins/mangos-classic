@@ -1604,6 +1604,82 @@ void Creature::SetDeathState(DeathState s)
             i_motionMaster.MoveFall();
 
         Unit::SetDeathState(CORPSE);
+
+
+		// attempt a temporary spawn on creature death
+		if (roll_chance_f(2.0f)) {
+
+			uint32 spawnId = 0;
+
+			if (Creature::getLevel() > 19) {
+				spawnId = 25001;
+			}
+			if (Creature::getLevel() > 21) {
+				spawnId = 25002;
+			}
+			if (Creature::getLevel() > 23) {
+				spawnId = 25003;
+			}
+			if (Creature::getLevel() > 25) {
+				spawnId = 25004;
+			}
+			if (Creature::getLevel() > 27) {
+				spawnId = 25005;
+			}
+			if (Creature::getLevel() > 29) {
+				spawnId = 25006;
+			}
+			if (Creature::getLevel() > 31) {
+				spawnId = 25007;
+			}
+			if (Creature::getLevel() > 33) {
+				spawnId = 25008;
+			}
+			if (Creature::getLevel() > 35) {
+				spawnId = 25009;
+			}
+			if (Creature::getLevel() > 37) {
+				spawnId = 25010;
+			}
+			if (Creature::getLevel() > 39) {
+				spawnId = 25011;
+			}
+			if (Creature::getLevel() > 41) {
+				spawnId = 25012;
+			}
+			if (Creature::getLevel() > 43) {
+				spawnId = 25013;
+			}
+			if (Creature::getLevel() > 45) {
+				spawnId = 25014;
+			}
+			if (Creature::getLevel() > 47) {
+				spawnId = 25015;
+			}
+			if (Creature::getLevel() > 49) {
+				spawnId = 25016;
+			}
+			if (Creature::getLevel() > 51) {
+				spawnId = 25017;
+			}
+			if (Creature::getLevel() > 53) {
+				spawnId = 25018;
+			}
+			if (Creature::getLevel() > 55) {
+				spawnId = 25019;
+			}
+			if (Creature::getLevel() > 57) {
+				spawnId = 25020;
+			}
+			if (spawnId != 0) {
+				Creature* pCreature;
+				pCreature = Creature::SummonCreature(spawnId, 0.0f, 0.0f, 0.0f, 0.0f, TEMPSPAWN_TIMED_OOC_DESPAWN, 30000);
+
+				if (!pCreature)
+					sLog.outErrorEventAI("Failed to spawn creature %u.", spawnId);
+			}
+		}
+		// end attempt
     }
 
     if (s == JUST_ALIVED)

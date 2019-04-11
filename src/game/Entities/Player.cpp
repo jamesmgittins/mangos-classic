@@ -2208,7 +2208,7 @@ void Player::RegenerateHealth()
             addvalue *= GetTotalAuraModifier(SPELL_AURA_MOD_REGEN_DURING_COMBAT) / 100.0f;
 
         if (!IsStandState())
-            addvalue *= 1.5;
+            addvalue *= sWorld.getConfig(CONFIG_FLOAT_RATE_HEALTH_SITTING);
     }
 
     // always regeneration bonus (including combat)
@@ -3490,6 +3490,9 @@ void Player::_SaveSpellCooldowns()
 
 uint32 Player::resetTalentsCost() const
 {
+	if (m_resetTalentsCost >= sWorld.getConfig(CONFIG_FLOAT_RATE_TALENT_MAX_RESET_COST_GOLD))
+		return sWorld.getConfig(CONFIG_FLOAT_RATE_TALENT_MAX_RESET_COST_GOLD) * GOLD;
+
     // The first time reset costs 1 gold
     if (m_resetTalentsCost < 1 * GOLD)
         return 1 * GOLD;

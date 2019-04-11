@@ -369,6 +369,7 @@ void World::LoadConfigSettings(bool reload)
 
     ///- Read all rates from the config file
     setConfigPos(CONFIG_FLOAT_RATE_HEALTH,                               "Rate.Health",                               1.0f);
+	setConfigPos(CONFIG_FLOAT_RATE_HEALTH_SITTING,						 "Rate.Health.Sitting",						  1.5f);
 	setConfig(	 CONFIG_BOOL_HEALTH_REGEN_IN_COMBAT,					 "Rate.Health.In.Combat",					  false);
 	setConfig(	 CONFIG_BOOL_CONSUME_AMMO,								 "Rate.Consume.Ammo",						  true);
     setConfigPos(CONFIG_FLOAT_RATE_POWER_MANA,                           "Rate.Mana",                                 1.0f);
@@ -425,6 +426,7 @@ void World::LoadConfigSettings(bool reload)
     setConfigPos(CONFIG_FLOAT_RATE_MINING_NEXT,   "Rate.Mining.Next", 1.0f);
     setConfigPos(CONFIG_FLOAT_RATE_INSTANCE_RESET_TIME, "Rate.InstanceResetTime", 1.0f);
     setConfigPos(CONFIG_FLOAT_RATE_TALENT, "Rate.Talent", 1.0f);
+	setConfigPos(CONFIG_FLOAT_RATE_TALENT_MAX_RESET_COST_GOLD, "Rate.Talent.Max.Reset.Cost.Gold", 50.0f);
     setConfigPos(CONFIG_FLOAT_RATE_CORPSE_DECAY_LOOTED, "Rate.Corpse.Decay.Looted", 0.0f);
 
     setConfigMinMax(CONFIG_FLOAT_RATE_TARGET_POS_RECALCULATION_RANGE, "TargetPosRecalculateRange", 1.5f, CONTACT_DISTANCE, ATTACK_DISTANCE);

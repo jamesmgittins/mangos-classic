@@ -18,6 +18,7 @@
 
 #include "Common.h"
 #include "Database/DatabaseEnv.h"
+#include "Globals/ObjectMgr.h"
 #include "World/World.h"
 #include "Entities/Player.h"
 #include "Server/Opcodes.h"

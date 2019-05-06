@@ -2395,7 +2395,7 @@ void Map::AddMessage(const std::function<void(Map*)>& message)
 
 bool Map::IsMountAllowed() const
 {
-    if (!IsDungeon())
+	if (!IsDungeon())
         return true;
 
     if (InstanceTemplate const* data = ObjectMgr::GetInstanceTemplate(GetId()))

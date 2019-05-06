@@ -1178,7 +1178,7 @@ void Creature::SelectLevel(uint32 forcedLevel /*= USE_DEFAULT_DATABASE_LEVEL*/)
     float meleeAttackPwr = 0.f;
     float rangedAttackPwr = 0.f;
 
-    float damageMod = _GetDamageMod(rank);
+    float damageMod = _GetDamageMod(rank, GetMap());
     float damageMulti = cinfo->DamageMultiplier * damageMod;
     bool usedDamageMulti = false;
 
@@ -1257,7 +1257,7 @@ void Creature::SelectLevel(uint32 forcedLevel /*= USE_DEFAULT_DATABASE_LEVEL*/)
         }
     }
 
-    health *= _GetHealthMod(rank); // Apply custom config setting
+    health *= _GetHealthMod(rank, GetMap()); // Apply custom config setting
     if (health < 1)
         health = 1;
 
@@ -1317,8 +1317,15 @@ void Creature::SelectLevel(uint32 forcedLevel /*= USE_DEFAULT_DATABASE_LEVEL*/)
     SetModifierValue(UNIT_MOD_ATTACK_POWER_RANGED, BASE_VALUE, rangedAttackPwr * damageMod);
 }
 
-float Creature::_GetHealthMod(int32 Rank)
+float Creature::_GetHealthMod(int32 Rank, Map* currMap)
 {
+
+	if (currMap->IsRaid())
+		return sWorld.getConfig(CONFIG_FLOAT_RATE_CREATURE_RAID_HP);
+
+	if (currMap->IsDungeon())
+		return sWorld.getConfig(CONFIG_FLOAT_RATE_CREATURE_DUNGEON_HP);
+
     switch (Rank)                                           // define rates for each elite rank
     {
         case CREATURE_ELITE_NORMAL:
@@ -1336,8 +1343,15 @@ float Creature::_GetHealthMod(int32 Rank)
     }
 }
 
-float Creature::_GetDamageMod(int32 Rank)
+float Creature::_GetDamageMod(int32 Rank, Map* currMap)
 {
+
+	if (currMap->IsRaid())
+		return sWorld.getConfig(CONFIG_FLOAT_RATE_CREATURE_RAID_DAMAGE);
+
+	if (currMap->IsDungeon())
+		return sWorld.getConfig(CONFIG_FLOAT_RATE_CREATURE_DUNGEON_DAMAGE);
+
     switch (Rank)                                           // define rates for each elite rank
     {
         case CREATURE_ELITE_NORMAL:
@@ -1355,8 +1369,15 @@ float Creature::_GetDamageMod(int32 Rank)
     }
 }
 
-float Creature::_GetSpellDamageMod(int32 Rank)
+float Creature::_GetSpellDamageMod(int32 Rank, Map* currMap)
 {
+
+	if (currMap->IsRaid())
+		return sWorld.getConfig(CONFIG_FLOAT_RATE_CREATURE_RAID_SPELLDAMAGE);
+
+	if (currMap->IsDungeon())
+		return sWorld.getConfig(CONFIG_FLOAT_RATE_CREATURE_DUNGEON_SPELLDAMAGE);
+
     switch (Rank)                                           // define rates for each elite rank
     {
         case CREATURE_ELITE_NORMAL:
@@ -1607,7 +1628,7 @@ void Creature::SetDeathState(DeathState s)
 
 
 		// attempt a temporary spawn on creature death
-		if (roll_chance_f(2.0f)) {
+		if (roll_chance_f(sWorld.getConfig(CONFIG_FLOAT_GOBLIN_SPAWN_CHANCE))) {
 
 			uint32 spawnId = 0;
 

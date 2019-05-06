@@ -85,6 +85,35 @@ bool ChatHandler::HandleStartCommand(char* /*args*/)
     return true;
 }
 
+bool ChatHandler::HandleParagonCommand(char* /*args*/)
+{
+
+	ObjectGuid guid = m_session->GetPlayer()->GetSelectionGuid();
+
+	if (guid)
+	{
+		Player* chr = sObjectMgr.GetPlayer(guid);
+		if (chr) {
+			PSendSysMessage(1703, chr->GetName(), chr->GetParagonLevel());
+			return true;
+		}
+	}
+	Player* chr = m_session->GetPlayer();
+
+	PSendSysMessage(1700, chr->GetParagonLevel());
+	if (chr->GetParagonLevel() > 0)
+	{
+		if (chr->GetParagonLevel() < 10)
+			PSendSysMessage(1702, chr->GetParagonLevel(), chr->GetParagonLevel(), chr->GetParagonLevel() * 2,chr->GetParagonLevel() * 10);
+		else
+			PSendSysMessage(1702, chr->GetParagonLevel(), chr->GetParagonLevel(), chr->GetParagonLevel() * 2, 100);
+	}
+	
+	PSendSysMessage(1701, chr->GetParagonXP(), chr->GetXpForNextParagonLevel());
+
+	return true;
+}
+
 bool ChatHandler::HandleServerInfoCommand(char* /*args*/)
 {
     uint32 activeClientsNum = sWorld.GetActiveSessionCount();

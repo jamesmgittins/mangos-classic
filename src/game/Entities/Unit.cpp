@@ -6422,7 +6422,7 @@ uint32 Unit::SpellDamageBonusDone(Unit* pVictim, SpellEntry const* spellProto, u
 
     // Creature damage
     if (GetTypeId() == TYPEID_UNIT && !((Creature*)this)->IsPet())
-        DoneTotalMod *= Creature::_GetSpellDamageMod(((Creature*)this)->GetCreatureInfo()->Rank);
+        DoneTotalMod *= Creature::_GetSpellDamageMod(((Creature*)this)->GetCreatureInfo()->Rank, GetMap());
 
     AuraList const& mModDamagePercentDone = GetAurasByType(SPELL_AURA_MOD_DAMAGE_PERCENT_DONE);
     for (auto i : mModDamagePercentDone)
@@ -6440,7 +6440,7 @@ uint32 Unit::SpellDamageBonusDone(Unit* pVictim, SpellEntry const* spellProto, u
     // Add flat bonus from spell damage versus
     DoneTotal += GetTotalAuraModifierByMiscMask(SPELL_AURA_MOD_FLAT_SPELL_DAMAGE_VERSUS, creatureTypeMask);
 
-    // Add pct bonus from spell damage versus
+	    // Add pct bonus from spell damage versus
     DoneTotalMod *= GetTotalAuraMultiplierByMiscMask(SPELL_AURA_MOD_DAMAGE_DONE_VERSUS, creatureTypeMask);
 
     // Add flat bonus from spell damage creature
@@ -6453,6 +6453,12 @@ uint32 Unit::SpellDamageBonusDone(Unit* pVictim, SpellEntry const* spellProto, u
 
     // Done fixed damage bonus auras
     int32 DoneAdvertisedBenefit = SpellBaseDamageBonusDone(GetSpellSchoolMask(spellProto));
+
+	// Add Paragon level bonus
+	if (GetTypeId() == TYPEID_PLAYER)
+	{
+		DoneAdvertisedBenefit += ((Player*)this)->GetParagonLevel() * 2;
+	}
 
     AuraList const& mOverrideClassScript = owner->GetAurasByType(SPELL_AURA_OVERRIDE_CLASS_SCRIPTS);
     for (auto i : mOverrideClassScript)
@@ -6602,6 +6608,12 @@ uint32 Unit::SpellHealingBonusDone(Unit* pVictim, SpellEntry const* spellProto, 
 
     // Done fixed damage bonus auras
     int32 DoneAdvertisedBenefit = SpellBaseHealingBonusDone(GetSpellSchoolMask(spellProto));
+
+	// Add Paragon level bonus
+	if (GetTypeId() == TYPEID_PLAYER)
+	{
+		DoneAdvertisedBenefit += ((Player*)this)->GetParagonLevel() * 2;
+	}
 
     // done scripted mod (take it from owner)
     Unit* owner = GetOwner();
@@ -8544,6 +8556,11 @@ float Unit::GetTotalStatValue(Stats stat) const
 
     // value = ((base_value * base_pct) + total_value) * total_pct
     float value  = m_auraModifiersGroup[unitMod][BASE_VALUE] + GetCreateStat(stat);
+	// Add Paragon level bonus
+	if (GetTypeId() == TYPEID_PLAYER)
+	{
+		value += ((Player*)this)->GetParagonLevel();
+	}
     value *= m_auraModifiersGroup[unitMod][BASE_PCT];
     value += m_auraModifiersGroup[unitMod][TOTAL_VALUE];
     value *= m_auraModifiersGroup[unitMod][TOTAL_PCT];

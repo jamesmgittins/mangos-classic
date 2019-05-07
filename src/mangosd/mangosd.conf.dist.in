@@ -3,7 +3,7 @@
 #####################################
 
 [MangosdConf]
-ConfVersion=2019020601
+ConfVersion=2019050101
 
 ###################################################################################################################
 # CONNECTIONS AND DIRECTORIES
@@ -823,8 +823,14 @@ PlayerCommands = 1
 #    AllowTwoSide.Interaction.Trade
 #    AllowTwoSide.Interaction.Auction
 #    AllowTwoSide.Interaction.Mail
-#        Allow or not common :chat(say,yell);channel(chat)group(join)guild(join);trade with different team,
-#        merge all auction houses for players from different teams, send mail to different team.
+#        Allow or disallow players from different teams to:
+#        - chat with each other (say, yell);
+#        - have merged chat channels;
+#        - join each other's groups;
+#        - join each other's guilds;
+#        - trade with each other when not in group;
+#        - have merged auction house listings;
+#        - send in-game mail;
 #        Default: 0 (Not allowed)
 #                 1 (Allowed)
 #
@@ -998,9 +1004,9 @@ Rate.Creature.Elite.Elite.HP = 1
 Rate.Creature.Elite.RAREELITE.HP = 1
 Rate.Creature.Elite.WORLDBOSS.HP = 1
 Rate.Creature.Elite.RARE.HP = 1
-Rate.Creature.Dungeon.HP = 1
-Rate.Creature.Dungeon.Damage = 1
-Rate.Creature.Dungeon.SpellDamage = 1
+Rate.Creature.Dungeon.HP = 0.3
+Rate.Creature.Dungeon.Damage = 0.3
+Rate.Creature.Dungeon.SpellDamage = 0.3
 Rate.Creature.Raid.HP = 1
 Rate.Creature.Raid.Damage = 1
 Rate.Creature.Raid.SpellDamage = 1

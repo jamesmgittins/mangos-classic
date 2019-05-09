@@ -4357,7 +4357,11 @@ void Player::ResurrectPlayer(float restore_percent, bool applySickness)
 {
 
 	if (!sWorld.getConfig(CONFIG_BOOL_CAN_RES_PLAYERS))
+	{
+		ChatHandler(this).PSendSysMessage("You cannot do that. Resurrections are disabled.");
 		return;
+	}
+		
 
     // remove death flag + set aura
     SetByteValue(UNIT_FIELD_BYTES_1, 3, 0x00);
@@ -5700,7 +5704,7 @@ void Player::UpdateSpellTrainedSkills(uint32 spellId, bool apply)
                     continue;
 
                 // Check if obtainable
-                if (!GetSkillInfo(skillId, ([] (SkillRaceClassInfoEntry const& entry) { return !(entry.flags & SKILL_FLAG_NOT_TRAINABLE); })))
+                if (!GetSkillInfo(skillId))
                     continue;
 
                 switch (GetSkillRangeType(pSkill, info->racemask != 0))

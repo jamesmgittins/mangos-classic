@@ -2221,7 +2221,7 @@ void Player::RegenerateHealth()
     if (addvalue < 0)
         addvalue = 0;
 
-    ModifyHealth(int32(ceil(addvalue / 4)));
+    ModifyHealth(RandomRound(addvalue / 4));
 }
 
 Creature* Player::GetNPCIfCanInteractWith(ObjectGuid guid, uint32 npcflagmask)

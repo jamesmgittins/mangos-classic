@@ -72,10 +72,16 @@ double rand_chance(void);
 
 float rand_chance_f(void);
 
+
 /* Return true if a random roll fits in the specified chance (range 0-100). */
 inline bool roll_chance_f(float chance)
 {
     return chance > rand_chance();
+}
+
+/* Return int rounded from float using random chance */
+inline uint32 RandomRound(float value) {
+	return floor(value) + (roll_chance_f((value - floor(value)) * 100) ? 1 : 0);
 }
 
 /* Return true if a random roll fits in the specified chance (range 0-100). */

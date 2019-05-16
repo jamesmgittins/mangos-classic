@@ -537,6 +537,8 @@ void World::LoadConfigSettings(bool reload)
     setConfig(CONFIG_UINT32_MAX_HONOR_POINTS, "MaxHonorPoints", 75000);
 	setConfig(CONFIG_UINT32_XP_PARAGON_LEVEL, "ParagonLevelXP", 100000);
 	setConfig(CONFIG_UINT32_PARAGON_LVL_REQUIREMENT, "ParagonXPLevelRequirement", 60);
+	setConfig(CONFIG_UINT32_PARAGON_COMBAT_REGEN, "ParagonCombatRegen", 5);
+	setConfig(CONFIG_UINT32_PARAGON_COMBAT_REGEN_CAP, "ParagonCombatRegenCap", 50);
 
     setConfigMinMax(CONFIG_UINT32_START_HONOR_POINTS, "StartHonorPoints", 0, 0, getConfig(CONFIG_UINT32_MAX_HONOR_POINTS));
 

@@ -104,10 +104,12 @@ bool ChatHandler::HandleParagonCommand(char* /*args*/)
 	PSendSysMessage(1700, chr->GetParagonLevel());
 	if (chr->GetParagonLevel() > 0)
 	{
-		if (chr->GetParagonLevel() < 10)
-			PSendSysMessage(1702, chr->GetParagonLevel(), chr->GetParagonLevel(), chr->GetParagonLevel() * 2,chr->GetParagonLevel() * 10);
-		else
-			PSendSysMessage(1702, chr->GetParagonLevel(), chr->GetParagonLevel(), chr->GetParagonLevel() * 2, 100);
+		int paragonXp = chr->GetParagonLevel() < 10 ? chr->GetParagonLevel() * 10 : 100;
+		int paragonHealthRegen = chr->GetParagonLevel() * sWorld.getConfig(CONFIG_UINT32_PARAGON_COMBAT_REGEN);
+		if (paragonHealthRegen > sWorld.getConfig(CONFIG_UINT32_PARAGON_COMBAT_REGEN_CAP))
+			paragonHealthRegen = sWorld.getConfig(CONFIG_UINT32_PARAGON_COMBAT_REGEN_CAP);
+
+		PSendSysMessage(1704, chr->GetParagonLevel(), chr->GetParagonLevel(), chr->GetParagonLevel() * 2, paragonXp, paragonHealthRegen);
 	}
 	
 	PSendSysMessage(1701, chr->GetParagonXP(), chr->GetXpForNextParagonLevel());

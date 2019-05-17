@@ -4363,8 +4363,11 @@ void Player::ResurrectPlayer(float restore_percent, bool applySickness)
 
 	if (!sWorld.getConfig(CONFIG_BOOL_CAN_RES_PLAYERS))
 	{
-		ChatHandler(this).PSendSysMessage("You cannot do that. Resurrections are disabled.");
-		return;
+		if (getLevel() < sWorld.getConfig(CONFIG_UINT32_MAX_PLAYER_LEVEL)) {
+			ChatHandler(this).PSendSysMessage("You cannot do that. Resurrections are disabled.");
+			return;
+		}
+		applySickness = true;
 	}
 		
 
@@ -4430,6 +4433,14 @@ void Player::ResurrectPlayer(float restore_percent, bool applySickness)
             }
         }
     }
+
+	if (!sWorld.getConfig(CONFIG_BOOL_CAN_RES_PLAYERS)) {
+		if (SpellAuraHolder * holder = GetSpellAuraHolder(SPELL_ID_PASSIVE_RESURRECTION_SICKNESS))
+		{
+			holder->SetAuraDuration(sWorld.getConfig(CONFIG_UINT32_RES_SICKNESS_DURATION) * MINUTE * IN_MILLISECONDS);
+			holder->UpdateAuraDuration();
+		}
+	}
 }
 
 void Player::KillPlayer()

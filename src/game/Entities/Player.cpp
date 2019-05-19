@@ -2469,6 +2469,11 @@ void Player::GiveXP(uint32 xp, Creature* victim, float groupRate)
     if (!isAlive())
         return;
 
+	if (SpellAuraHolder * holder = GetSpellAuraHolder(SPELL_ID_PASSIVE_RESURRECTION_SICKNESS))
+	{
+		return;
+	}
+
     uint32 level = getLevel();
 
 	if (GetParagonLevel() < 10)
@@ -4361,17 +4366,16 @@ void Player::BuildPlayerRepop()
 void Player::ResurrectPlayer(float restore_percent, bool applySickness)
 {
 
-	
-
 	if (!sWorld.getConfig(CONFIG_BOOL_CAN_RES_PLAYERS))
 	{
-		bool corpseInDungeon = this->GetCorpse() && (this->GetCorpse()->GetMap()->IsDungeon() || this->GetCorpse()->GetMap()->IsRaid() || this->GetCorpse()->GetMap()->IsBattleGround());
+		bool isBattleGround = this->GetMap()->IsBattleGround();
 
-		if (getLevel() < sWorld.getConfig(CONFIG_UINT32_MAX_PLAYER_LEVEL) && !corpseInDungeon) {
-			ChatHandler(this).PSendSysMessage("You cannot do that. Resurrections are disabled.");
+		if (!isBattleGround) {
+			ChatHandler(this).PSendSysMessage("You cannot do that. Resurrections are disabled outside of battlegrounds.");
 			return;
+			//applySickness = true;
 		}
-		applySickness = true;
+		
 	}
 		
 
@@ -4437,20 +4441,18 @@ void Player::ResurrectPlayer(float restore_percent, bool applySickness)
             }
         }
     }
-
+	/*
 	if (!sWorld.getConfig(CONFIG_BOOL_CAN_RES_PLAYERS)) {
-
-		bool corpseInDungeon = this->GetCorpse() && (this->GetCorpse()->GetMap()->IsDungeon() || this->GetCorpse()->GetMap()->IsRaid() || this->GetCorpse()->GetMap()->IsBattleGround());
-
-		if (corpseInDungeon)
-			return;
+		// set resurrection sickness
+		CastSpell(this, SPELL_ID_PASSIVE_RESURRECTION_SICKNESS, TRIGGERED_OLD_TRIGGERED);
 
 		if (SpellAuraHolder * holder = GetSpellAuraHolder(SPELL_ID_PASSIVE_RESURRECTION_SICKNESS))
 		{
-			holder->SetAuraDuration(sWorld.getConfig(CONFIG_UINT32_RES_SICKNESS_DURATION) * MINUTE * IN_MILLISECONDS);
+			holder->SetAuraDuration(-1);
 			holder->UpdateAuraDuration();
 		}
-	}
+	} 
+	*/
 }
 
 void Player::KillPlayer()

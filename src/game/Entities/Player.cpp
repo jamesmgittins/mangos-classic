@@ -2598,6 +2598,10 @@ void Player::GiveLevel(uint32 level)
 
     // resend quests status directly
     SendQuestGiverStatusMultiple();
+
+	if (!sWorld.getConfig(CONFIG_BOOL_CAN_RES_PLAYERS) && level == sWorld.getConfig(CONFIG_UINT32_MAX_PLAYER_LEVEL)) {
+		sWorld.WorldMessage("Congratulations! %s has reached level %u", this->GetName(), level);
+	}
 }
 
 // Update player to next level
@@ -4474,6 +4478,10 @@ void Player::KillPlayer()
 
     // update visibility
     UpdateObjectVisibility();
+
+	if (!sWorld.getConfig(CONFIG_BOOL_CAN_RES_PLAYERS) && this->getLevel() > 9) {
+		sWorld.WorldMessage("RIP %s, died at level %u", this->GetName(), this->getLevel());
+	}
 }
 
 Corpse* Player::CreateCorpse()

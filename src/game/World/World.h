@@ -602,6 +602,8 @@ class World
         static TimePoint GetCurrentClockTime() { return m_currentTime; }
         static uint32 GetCurrentDiff() { return m_currentDiff; }
 
+		void WorldMessage(const char* format, ...);
+
     protected:
         void _UpdateGameTime();
         // callback for UpdateRealmCharacters

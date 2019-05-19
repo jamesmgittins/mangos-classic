@@ -4479,7 +4479,7 @@ void Player::KillPlayer()
     // update visibility
     UpdateObjectVisibility();
 
-	if (!sWorld.getConfig(CONFIG_BOOL_CAN_RES_PLAYERS) && this->getLevel() > 9) {
+	if (!sWorld.getConfig(CONFIG_BOOL_CAN_RES_PLAYERS) && this->getLevel() > 9 && !this->GetMap()->IsBattleGround()) {
 		sWorld.WorldMessage("RIP %s, died at level %u", this->GetName(), this->getLevel());
 	}
 }

@@ -2496,21 +2496,16 @@ void Player::GiveXP(uint32 xp, Creature* victim, float groupRate)
 	if (level >= sWorld.getConfig(CONFIG_UINT32_MAX_PLAYER_LEVEL))
 		return;
 
-    while (newXP >= nextLvlXP)
-    {
-        newXP -= nextLvlXP;
+	while (newXP >= nextLvlXP && level < sWorld.getConfig(CONFIG_UINT32_MAX_PLAYER_LEVEL))
+	{
+		newXP -= nextLvlXP;
 
 		if (level < sWorld.getConfig(CONFIG_UINT32_MAX_PLAYER_LEVEL))
-		{
 			GiveLevel(level + 1);
-			if (level + 1 >= sWorld.getConfig(CONFIG_UINT32_MAX_PLAYER_LEVEL))
-			{
-				newXP = GetUInt32Value(PLAYER_XP);
-			}
-		}
-        level = getLevel();
-        nextLvlXP = GetUInt32Value(PLAYER_NEXT_LEVEL_XP);
-    }
+
+		level = getLevel();
+		nextLvlXP = GetUInt32Value(PLAYER_NEXT_LEVEL_XP);
+	}
 
     SetUInt32Value(PLAYER_XP, newXP);
 }

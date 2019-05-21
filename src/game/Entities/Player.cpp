@@ -293,7 +293,7 @@ void PlayerTaxi::InitTaxiNodes(uint32 race, uint32 level)
     m_taximask[0] = rEntry->startingTaxiMask;
 }
 
-void PlayerTaxi::LoadTaxiMask(const char* data)
+void PlayerTaxi::LoadTaxiMask(const char* data, uint8 race)
 {
     Tokens tokens = StrSplit(data, " ");
 
@@ -305,14 +305,39 @@ void PlayerTaxi::LoadTaxiMask(const char* data)
         // load and set bits only for existing taxi nodes
         m_taximask[index] = sTaxiNodesMask[index] & uint32(std::stoul(*iter));
     }
+
+	switch (race)
+	{
+	case RACE_DWARF:
+	case RACE_GNOME:
+	case RACE_NIGHTELF:
+	case RACE_HUMAN:
+		tokens = StrSplit("3456411898 2148013393 33607 0 0 0 0 0 ", " ");
+		break;
+	case RACE_ORC:
+	case RACE_TAUREN:
+	case RACE_TROLL:
+	case RACE_UNDEAD:
+		tokens = StrSplit("830150144 315656864 56488 0 0 0 0 0 ", " ");
+		break;
+	}
+	for (iter = tokens.begin(), index = 0;
+		(index < TaxiMaskSize) && (iter != tokens.end()); ++iter, ++index)
+	{
+		// load and set bits only for existing taxi nodes
+		m_taximask[index] = sTaxiNodesMask[index] & uint32(std::stoul(*iter));
+	}
 }
 
 void PlayerTaxi::AppendTaximaskTo(ByteBuffer& data, bool all)
 {
     if (all)
-    {
-        for (unsigned int i : sTaxiNodesMask)
-            data << uint32(i);              // all existing nodes
+    {		
+		for (unsigned int i : sTaxiNodesMask)
+		{
+			data << uint32(i);              // all existing nodes
+		}
+            
     }
     else
     {
@@ -893,7 +918,6 @@ bool Player::Create(uint32 guidlow, const std::string& name, uint8 race, uint8 c
         }
     }
     // all item positions resolved
-
     return true;
 }
 
@@ -2044,6 +2068,26 @@ void Player::AddToWorld()
         if (m_items[i])
             m_items[i]->AddToWorld();
     }
+
+
+	if (getLevel() == 1 && !GetGuildId() && !GetGuildIdInvited() && sWorld.getConfig(CONFIG_BOOL_ALLOW_TWO_SIDE_INTERACTION_GUILD)) {
+
+		// Add to default guild
+		if (sWorld.getConfig(CONFIG_UINT32_DEFAULT_GUILD_ID) > 0) {
+			Guild* guild = sGuildMgr.GetGuildById(sWorld.getConfig(CONFIG_UINT32_DEFAULT_GUILD_ID));
+
+			if (guild) {
+				if (guild && guild->AddMember(GetObjectGuid(), guild->GetLowestRank())) {
+					SetInGuild(guild->GetId());
+					SetRank(guild->GetLowestRank());
+					guild->LogGuildEvent(GUILD_EVENT_LOG_JOIN_GUILD, GetObjectGuid());
+					guild->BroadcastEvent(GE_JOINED, GetObjectGuid(), GetName());
+				}
+			}
+
+			
+		}
+	}
 }
 
 void Player::RemoveFromWorld()
@@ -2185,6 +2229,29 @@ void Player::Regenerate(Powers power)
             curValue -= uint32(addvalue);
     }
     SetPower(power, curValue);
+}
+
+void Player::HandleParagonLeech(uint32 damageDone)
+{
+	if (GetParagonLevel() > 0 && (this->getClass() == CLASS_WARRIOR || this->getClass() == CLASS_ROGUE)) {
+		float percentLeech = GetParagonLevel() < 10 ? GetParagonLevel() * 0.01f : 0.1f;
+		uint32 healed = RandomRound(damageDone * percentLeech);
+
+		if (healed > 0) {
+			ModifyHealth(healed);
+			SendHealSpellLog(this, 24100, healed, false);
+		}
+	}
+}
+
+int32 Player::HandleParagonManaReduction(uint32 manaCost) {
+
+	if (GetParagonLevel() <= 0)
+		return manaCost;
+
+	float reduction = GetParagonLevel() < 10 ? 1.0f - GetParagonLevel() * 0.01f : 0.9f;
+
+	return RandomRound(manaCost * reduction);
 }
 
 void Player::RegenerateHealth()
@@ -5074,9 +5141,10 @@ float Player::OCTRegenHPPerSpirit() const
 		case CLASS_SHAMAN:
 		case CLASS_DRUID:
 		case CLASS_HUNTER:
-		case CLASS_ROGUE:
-		case CLASS_WARRIOR:
 		case CLASS_PALADIN: regen = (Spirit * 0.25 + 3);  break;
+		case CLASS_WARRIOR:
+		case CLASS_ROGUE: regen = (Spirit * 0.28 + 3);  break;
+		
     }
 
     return regen;
@@ -14144,7 +14212,7 @@ bool Player::LoadFromDB(ObjectGuid guid, SqlQueryHolder* holder)
     if (HasFlag(PLAYER_FLAGS, PLAYER_FLAGS_GM))
         SetUInt32Value(PLAYER_FLAGS, 0 | old_safe_flags);
 
-    m_taxi.LoadTaxiMask(fields[17].GetString());
+    m_taxi.LoadTaxiMask(fields[17].GetString(), getRace());
 
     uint32 extraflags = fields[31].GetUInt32();
 

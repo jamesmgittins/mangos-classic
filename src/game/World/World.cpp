@@ -540,6 +540,7 @@ void World::LoadConfigSettings(bool reload)
 	setConfig(CONFIG_UINT32_PARAGON_COMBAT_REGEN, "ParagonCombatRegen", 5);
 	setConfig(CONFIG_UINT32_PARAGON_COMBAT_REGEN_CAP, "ParagonCombatRegenCap", 50);
 	setConfig(CONFIG_UINT32_RES_SICKNESS_DURATION, "ResSicknessDuration", 10);
+	setConfig(CONFIG_UINT32_DEFAULT_GUILD_ID, "DefaultGuildId", 0);
 
     setConfigMinMax(CONFIG_UINT32_START_HONOR_POINTS, "StartHonorPoints", 0, 0, getConfig(CONFIG_UINT32_MAX_HONOR_POINTS));
 

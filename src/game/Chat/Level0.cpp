@@ -110,6 +110,17 @@ bool ChatHandler::HandleParagonCommand(char* /*args*/)
 			paragonHealthRegen = sWorld.getConfig(CONFIG_UINT32_PARAGON_COMBAT_REGEN_CAP);
 
 		PSendSysMessage(1704, chr->GetParagonLevel(), chr->GetParagonLevel(), chr->GetParagonLevel() * 2, paragonXp, paragonHealthRegen);
+
+		if (chr->getClass() == CLASS_WARRIOR || chr->getClass() == CLASS_ROGUE)
+		{
+			int paragonLifeSteal = chr->GetParagonLevel() < 10 ? chr->GetParagonLevel() * 1 : 10;
+			PSendSysMessage("Also grants %u%% lifestealing", paragonLifeSteal);
+		}
+		else
+		{
+			int paragonManaCost = chr->GetParagonLevel() < 10 ? chr->GetParagonLevel() * 1 : 10;
+			PSendSysMessage("Also grants %u%% mana cost reduction", paragonManaCost);
+		}
 	}
 	
 	PSendSysMessage(1701, chr->GetParagonXP(), chr->GetXpForNextParagonLevel());

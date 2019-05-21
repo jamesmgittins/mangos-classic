@@ -100,6 +100,7 @@ enum eConfigUInt32Values
     CONFIG_UINT32_CHARACTERS_CREATING_DISABLED,
     CONFIG_UINT32_CHARACTERS_PER_ACCOUNT,
     CONFIG_UINT32_CHARACTERS_PER_REALM,
+	CONFIG_UINT32_DEFAULT_GUILD_ID,
     CONFIG_UINT32_SKIP_CINEMATICS,
     CONFIG_UINT32_MAX_PLAYER_LEVEL,
 	CONFIG_UINT32_TALENT_PLAYER_LEVEL,
@@ -445,7 +446,7 @@ class World
 
         /// Set the active session server limit (or security level limitation)
         void SetPlayerLimit(int32 limit, bool needUpdate = false);
-
+		
         // player Queue
         typedef std::list<WorldSession*> Queue;
         void AddQueuedSession(WorldSession*);
@@ -631,7 +632,7 @@ class World
         uint32 m_ShutdownTimer;
         uint32 m_ShutdownMask;
 
-        uint32 m_NextMaintenanceDate;
+		uint32 m_NextMaintenanceDate;
         uint32 m_MaintenanceTimeChecker;
 
         time_t m_startTime;

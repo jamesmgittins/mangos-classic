@@ -791,7 +791,7 @@ class PlayerTaxi
         ~PlayerTaxi() {}
         // Nodes
         void InitTaxiNodes(uint32 race, uint32 level);
-        void LoadTaxiMask(const char* data);
+        void LoadTaxiMask(const char* data, uint8 race);
 
         bool IsTaximaskNodeKnown(uint32 nodeidx) const
         {
@@ -1004,7 +1004,9 @@ class Player : public Unit
 		void GiveParagonLevel(uint32 level);
 		uint32 GetParagonXP() { return m_paragon_xp; }
 		void SetParagonXP(uint32 newXP) { m_paragon_xp = newXP; }
-
+		void HandleParagonLeech(uint32 damageDone);
+		int32 HandleParagonManaReduction(uint32 manaCost);
+		
         void InitStatsForLevel(bool reapplyMods = false);
 
         // Played Time Stuff
@@ -1640,7 +1642,7 @@ class Player : public Unit
         void UpdateSpellCritChance(uint32 school);
         void UpdateManaRegen();
 
-        ObjectGuid const& GetLootGuid() const { return m_lootGuid; }
+		ObjectGuid const& GetLootGuid() const { return m_lootGuid; }
         void SetLootGuid(ObjectGuid const& guid) { m_lootGuid = guid; }
 
         void RemovedInsignia(Player* looterPlr);
@@ -2429,7 +2431,7 @@ class Player : public Unit
 
         CinematicMgrUPtr m_cinematicMgr;
 
-        void AdjustQuestReqItemCount(Quest const* pQuest, QuestStatusData& questStatusData);
+		void AdjustQuestReqItemCount(Quest const* pQuest, QuestStatusData& questStatusData);
 
         void SetCanDelayTeleport(bool setting) { m_bCanDelayTeleport = setting; }
         bool IsHasDelayedTeleport() const

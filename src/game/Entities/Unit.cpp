@@ -2293,9 +2293,13 @@ void Unit::AttackerStateUpdate(Unit* pVictim, WeaponAttackType attType, bool ext
         meleeDamageInfo.totalDamage += meleeDamageInfo.subDamage[i].damage;
     }
 
-    SendAttackStateUpdate(&meleeDamageInfo);
+	SendAttackStateUpdate(&meleeDamageInfo);
     DealMeleeDamage(&meleeDamageInfo, true);
     ProcDamageAndSpell(ProcSystemArguments(meleeDamageInfo.target, meleeDamageInfo.procAttacker, meleeDamageInfo.procVictim, meleeDamageInfo.procEx, meleeDamageInfo.totalDamage, meleeDamageInfo.attackType));
+
+	if (GetTypeId() == TYPEID_PLAYER) {
+		((Player*)this)->HandleParagonLeech(meleeDamageInfo.totalDamage);
+	}
 
     uint32 totalAbsorb = 0;
     uint32 totalResist = 0;
@@ -7615,7 +7619,7 @@ bool Unit::IsVisibleForOrDetect(Unit const* u, WorldObject const* viewPoint, boo
 float Unit::GetVisibleDistance(Unit const* target, bool alert) const
 {
     // Visible distance based on stealth value (stealth rank 4 300MOD, 10.5 - 3 = 7.5)
-    float visibleDistance = 10.5f - (GetTotalAuraModifier(SPELL_AURA_MOD_STEALTH) / 100.0f);
+    float visibleDistance = (GetTypeId() == TYPEID_PLAYER ? 6.5f : 10.5f) - (GetTotalAuraModifier(SPELL_AURA_MOD_STEALTH) / 100.0f);
 
     // Visible distance is modified by
     //-Level Diff (every level diff = 1.0f in visible distance)

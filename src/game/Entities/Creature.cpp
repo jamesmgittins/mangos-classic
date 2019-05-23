@@ -1323,7 +1323,7 @@ float Creature::_GetHealthMod(int32 Rank, Map* currMap)
 	if (currMap->IsRaid())
 		return sWorld.getConfig(CONFIG_FLOAT_RATE_CREATURE_RAID_HP);
 
-	if (currMap->IsDungeon())
+	if (currMap->IsDungeon() && !currMap->HasGroupedPlayers())
 		return sWorld.getConfig(CONFIG_FLOAT_RATE_CREATURE_DUNGEON_HP);
 
     switch (Rank)                                           // define rates for each elite rank
@@ -1349,8 +1349,10 @@ float Creature::_GetDamageMod(int32 Rank, Map* currMap)
 	if (currMap->IsRaid())
 		return sWorld.getConfig(CONFIG_FLOAT_RATE_CREATURE_RAID_DAMAGE);
 
-	if (currMap->IsDungeon())
+	if (currMap->IsDungeon() && !currMap->HasGroupedPlayers()) {
 		return sWorld.getConfig(CONFIG_FLOAT_RATE_CREATURE_DUNGEON_DAMAGE);
+	}
+		
 
     switch (Rank)                                           // define rates for each elite rank
     {
@@ -1375,7 +1377,7 @@ float Creature::_GetSpellDamageMod(int32 Rank, Map* currMap)
 	if (currMap->IsRaid())
 		return sWorld.getConfig(CONFIG_FLOAT_RATE_CREATURE_RAID_SPELLDAMAGE);
 
-	if (currMap->IsDungeon())
+	if (currMap->IsDungeon() && !currMap->HasGroupedPlayers())
 		return sWorld.getConfig(CONFIG_FLOAT_RATE_CREATURE_DUNGEON_SPELLDAMAGE);
 
     switch (Rank)                                           // define rates for each elite rank

@@ -71,7 +71,7 @@ typedef std::deque<Mail*> PlayerMails;
 #define PLAYER_EXPLORED_ZONES_SIZE  64
 
 // TODO: Maybe this can be implemented in configuration file.
-#define PLAYER_NEW_INSTANCE_LIMIT_PER_HOUR 5
+#define PLAYER_NEW_INSTANCE_LIMIT_PER_HOUR 50
 
 // Note: SPELLMOD_* values is aura types in fact
 enum SpellModType

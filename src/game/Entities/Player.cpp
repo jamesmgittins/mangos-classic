@@ -2292,7 +2292,7 @@ void Player::RegenerateHealth()
 
     if (addvalue < 0)
         addvalue = 0;
-
+	
     ModifyHealth(RandomRound(addvalue / 4));
 }
 

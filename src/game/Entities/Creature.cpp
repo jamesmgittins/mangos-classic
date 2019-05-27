@@ -1207,7 +1207,7 @@ void Creature::SelectLevel(uint32 forcedLevel /*= USE_DEFAULT_DATABASE_LEVEL*/)
 
             // attack power (not sure about the next line)
             meleeAttackPwr = cCLS->BaseMeleeAttackPower;
-            rangedAttackPwr = cCLS->BaseRangedAttackPower;
+            rangedAttackPwr = cCLS->BaseRangedAttackPower * damageMod;
         }
     }
 
@@ -1324,7 +1324,7 @@ float Creature::_GetHealthMod(int32 Rank, Map* currMap)
 		return sWorld.getConfig(CONFIG_FLOAT_RATE_CREATURE_RAID_HP);
 
 	if (currMap->IsDungeon() && !currMap->HasGroupedPlayers())
-		return sWorld.getConfig(CONFIG_FLOAT_RATE_CREATURE_DUNGEON_HP);
+		return sWorld.getConfig(CONFIG_FLOAT_RATE_CREATURE_DUNGEON_HP) * dungeonScaleForMap(currMap->GetId());
 
     switch (Rank)                                           // define rates for each elite rank
     {
@@ -1349,9 +1349,8 @@ float Creature::_GetDamageMod(int32 Rank, Map* currMap)
 	if (currMap->IsRaid())
 		return sWorld.getConfig(CONFIG_FLOAT_RATE_CREATURE_RAID_DAMAGE);
 
-	if (currMap->IsDungeon() && !currMap->HasGroupedPlayers()) {
-		return sWorld.getConfig(CONFIG_FLOAT_RATE_CREATURE_DUNGEON_DAMAGE);
-	}
+	if (currMap->IsDungeon() && !currMap->HasGroupedPlayers())
+		return sWorld.getConfig(CONFIG_FLOAT_RATE_CREATURE_DUNGEON_DAMAGE) * dungeonScaleForMap(currMap->GetId());
 		
 
     switch (Rank)                                           // define rates for each elite rank
@@ -1378,7 +1377,7 @@ float Creature::_GetSpellDamageMod(int32 Rank, Map* currMap)
 		return sWorld.getConfig(CONFIG_FLOAT_RATE_CREATURE_RAID_SPELLDAMAGE);
 
 	if (currMap->IsDungeon() && !currMap->HasGroupedPlayers())
-		return sWorld.getConfig(CONFIG_FLOAT_RATE_CREATURE_DUNGEON_SPELLDAMAGE);
+		return sWorld.getConfig(CONFIG_FLOAT_RATE_CREATURE_DUNGEON_SPELLDAMAGE) * dungeonScaleForMap(currMap->GetId());
 
     switch (Rank)                                           // define rates for each elite rank
     {

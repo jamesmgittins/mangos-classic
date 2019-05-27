@@ -112,6 +112,10 @@ void Player::UpdateResistances(uint32 school)
     if (school > SPELL_SCHOOL_NORMAL)
     {
         int32 value = GetTotalResistanceValue(SpellSchools(school));
+		
+		if (GetParagonLevel() > 0)
+			value += GetParagonLevel() * sWorld.getConfig(CONFIG_UINT32_PARAGON_RESISTANCE);
+
         SetResistance(SpellSchools(school), value);
     }
     else
@@ -134,6 +138,10 @@ void Player::UpdateArmor()
 
     m_auraModifiersGroup[UNIT_MOD_ARMOR][TOTAL_VALUE] += dynamic;
     int32 value = GetTotalResistanceValue(SPELL_SCHOOL_NORMAL);
+	
+	if (GetParagonLevel() > 0)
+		value += GetParagonLevel() * sWorld.getConfig(CONFIG_UINT32_PARAGON_ARMOR);
+
     SetArmor(value);
     m_auraModifiersGroup[UNIT_MOD_ARMOR][TOTAL_VALUE] -= dynamic;
 }
@@ -610,7 +618,7 @@ void Creature::UpdateResistances(uint32 school)
     if (school > SPELL_SCHOOL_NORMAL)
     {
         int32 value = GetTotalResistanceValue(SpellSchools(school));
-        SetResistance(SpellSchools(school), value);
+		SetResistance(SpellSchools(school), value);
     }
     else
         UpdateArmor();
@@ -730,6 +738,11 @@ bool Pet::UpdateStats(Stats stat)
 
     // value = ((base_value * base_pct) + total_value) * total_pct
     float value  = GetTotalStatValue(stat);
+
+	if (GetOwner() && GetOwner()->GetTypeId() == TYPEID_PLAYER) {
+		value += ((Player*)GetOwner())->GetParagonLevel();
+	}
+
     SetStat(stat, int32(value));
 
     switch (stat)
@@ -762,8 +775,15 @@ bool Pet::UpdateAllStats()
 
 void Pet::UpdateResistances(uint32 school)
 {
-    if (school > SPELL_SCHOOL_NORMAL)
-        return Creature::UpdateResistances(school);
+	if (school > SPELL_SCHOOL_NORMAL) {
+		int32 value = GetTotalResistanceValue(SpellSchools(school));
+		
+		if (GetOwner() && GetOwner()->GetTypeId() == TYPEID_PLAYER) {
+			value += ((Player*)GetOwner())->GetParagonLevel() * sWorld.getConfig(CONFIG_UINT32_PARAGON_RESISTANCE);
+		}
+
+		SetResistance(SpellSchools(school), value);
+	}
     else
         UpdateArmor();
 }
@@ -771,6 +791,10 @@ void Pet::UpdateResistances(uint32 school)
 void Pet::UpdateArmor()
 {
     float amount = (GetStat(STAT_AGILITY) * 2.0f);
+
+	if (GetOwner() && GetOwner()->GetTypeId() == TYPEID_PLAYER) {
+		amount += ((Player*)GetOwner())->GetParagonLevel() * sWorld.getConfig(CONFIG_UINT32_PARAGON_ARMOR);
+	}
 
     m_auraModifiersGroup[UNIT_MOD_ARMOR][TOTAL_VALUE] += amount;
     Creature::UpdateArmor();

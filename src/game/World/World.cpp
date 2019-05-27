@@ -417,6 +417,10 @@ void World::LoadConfigSettings(bool reload)
 	setConfigPos(CONFIG_FLOAT_RATE_CREATURE_DUNGEON_HP, "Rate.Creature.Dungeon.HP", 1.0f);
 	setConfigPos(CONFIG_FLOAT_RATE_CREATURE_DUNGEON_DAMAGE, "Rate.Creature.Dungeon.Damage", 1.0f);
 	setConfigPos(CONFIG_FLOAT_RATE_CREATURE_DUNGEON_SPELLDAMAGE, "Rate.Creature.Dungeon.SpellDamage", 1.0f);
+	setConfigPos(CONFIG_FLOAT_RATE_CREATURE_DUNGEON_SCALE_BRD, "Rate.Creature.Dungeon.Scale.BRD", 1.0f);
+	setConfigPos(CONFIG_FLOAT_RATE_CREATURE_DUNGEON_SCALE_STRAT, "Rate.Creature.Dungeon.Scale.Strat", 1.0f);
+	setConfigPos(CONFIG_FLOAT_RATE_CREATURE_DUNGEON_SCALE_DIREMAUL, "Rate.Creature.Dungeon.Scale.Diremaul", 1.0f);
+	setConfigPos(CONFIG_FLOAT_RATE_CREATURE_DUNGEON_SCALE_SCHOLO, "Rate.Creature.Dungeon.Scale.Scholo", 1.0f);
 	setConfigPos(CONFIG_FLOAT_RATE_CREATURE_RAID_HP, "Rate.Creature.Raid.HP", 1.0f);
 	setConfigPos(CONFIG_FLOAT_RATE_CREATURE_RAID_DAMAGE, "Rate.Creature.Raid.Damage", 1.0f);
 	setConfigPos(CONFIG_FLOAT_RATE_CREATURE_RAID_SPELLDAMAGE, "Rate.Creature.Raid.SpellDamage", 1.0f);
@@ -539,6 +543,8 @@ void World::LoadConfigSettings(bool reload)
 	setConfig(CONFIG_UINT32_PARAGON_LVL_REQUIREMENT, "ParagonXPLevelRequirement", 60);
 	setConfig(CONFIG_UINT32_PARAGON_COMBAT_REGEN, "ParagonCombatRegen", 5);
 	setConfig(CONFIG_UINT32_PARAGON_COMBAT_REGEN_CAP, "ParagonCombatRegenCap", 50);
+	setConfig(CONFIG_UINT32_PARAGON_ARMOR, "ParagonArmor", 10);
+	setConfig(CONFIG_UINT32_PARAGON_RESISTANCE, "ParagonResistance", 2);
 	setConfig(CONFIG_UINT32_RES_SICKNESS_DURATION, "ResSicknessDuration", 10);
 	setConfig(CONFIG_UINT32_DEFAULT_GUILD_ID, "DefaultGuildId", 0);
 

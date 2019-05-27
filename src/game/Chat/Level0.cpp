@@ -109,7 +109,10 @@ bool ChatHandler::HandleParagonCommand(char* /*args*/)
 		if (paragonHealthRegen > sWorld.getConfig(CONFIG_UINT32_PARAGON_COMBAT_REGEN_CAP))
 			paragonHealthRegen = sWorld.getConfig(CONFIG_UINT32_PARAGON_COMBAT_REGEN_CAP);
 
-		PSendSysMessage(1704, chr->GetParagonLevel(), chr->GetParagonLevel(), chr->GetParagonLevel() * 2, paragonXp, paragonHealthRegen);
+		int paragonArmor = chr->GetParagonLevel() * sWorld.getConfig(CONFIG_UINT32_PARAGON_ARMOR);
+		int paragonResistance = chr->GetParagonLevel() * sWorld.getConfig(CONFIG_UINT32_PARAGON_RESISTANCE);
+
+		PSendSysMessage(1702, chr->GetParagonLevel(), chr->GetParagonLevel(), chr->GetParagonLevel() * 2, paragonArmor, paragonResistance, paragonXp, paragonHealthRegen);
 
 		if (chr->getClass() == CLASS_WARRIOR || chr->getClass() == CLASS_ROGUE)
 		{

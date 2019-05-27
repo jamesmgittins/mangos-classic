@@ -1502,6 +1502,12 @@ void Unit::CalculateSpellDamage(SpellNonMeleeDamage* spellDamageInfo, int32 dama
     {
         // Melee and Ranged Spells
         case SPELL_DAMAGE_CLASS_RANGED:
+			if (GetTypeId() == TYPEID_UNIT && !((Creature*)this)->IsPet())
+				damage *= Creature::_GetDamageMod(((Creature*)this)->GetCreatureInfo()->Rank, GetMap());
+
+			damage = MeleeDamageBonusDone(pVictim, damage, attackType, damageSchoolMask, spellInfo, SPELL_DIRECT_DAMAGE);
+			damage = pVictim->MeleeDamageBonusTaken(this, damage, attackType, damageSchoolMask, spellInfo, SPELL_DIRECT_DAMAGE);
+			break;
         case SPELL_DAMAGE_CLASS_MELEE:
         {
             // Calculate damage bonus

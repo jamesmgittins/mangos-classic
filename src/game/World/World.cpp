@@ -547,6 +547,7 @@ void World::LoadConfigSettings(bool reload)
 	setConfig(CONFIG_UINT32_PARAGON_RESISTANCE, "ParagonResistance", 2);
 	setConfig(CONFIG_UINT32_RES_SICKNESS_DURATION, "ResSicknessDuration", 10);
 	setConfig(CONFIG_UINT32_DEFAULT_GUILD_ID, "DefaultGuildId", 0);
+	setConfig(CONFIG_UINT32_MIN_ENCHANT_TIME, "MinEnchantTime", 0);
 
     setConfigMinMax(CONFIG_UINT32_START_HONOR_POINTS, "StartHonorPoints", 0, 0, getConfig(CONFIG_UINT32_MAX_HONOR_POINTS));
 
@@ -557,6 +558,7 @@ void World::LoadConfigSettings(bool reload)
     setConfig(CONFIG_BOOL_LONG_TAXI_PATHS_PERSISTENCE, "LongFlightPathsPersistence", false);
     setConfig(CONFIG_BOOL_ALL_TAXI_PATHS, "AllFlightPaths", false);
 	setConfig(CONFIG_BOOL_CAN_RES_PLAYERS, "CanResPlayers", true);
+	
 	setConfig(CONFIG_BOOL_GOLD_ACCOUNT_WIDE, "GoldAccountWide", false);
 	setConfig(CONFIG_BOOL_BANK_ACCOUNT_WIDE, "BankAccountWide", false);
 

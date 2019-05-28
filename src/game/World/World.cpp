@@ -561,6 +561,7 @@ void World::LoadConfigSettings(bool reload)
 	
 	setConfig(CONFIG_BOOL_GOLD_ACCOUNT_WIDE, "GoldAccountWide", false);
 	setConfig(CONFIG_BOOL_BANK_ACCOUNT_WIDE, "BankAccountWide", false);
+	setConfig(CONFIG_BOOL_ALWAYS_REMOVE_CREATURE_STEALTH, "AlwaysRemoveCreatureStealth", false);
 
 	
 

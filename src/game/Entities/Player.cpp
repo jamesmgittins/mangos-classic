@@ -312,7 +312,7 @@ void PlayerTaxi::LoadTaxiMask(const char* data, uint8 race)
 	case RACE_GNOME:
 	case RACE_NIGHTELF:
 	case RACE_HUMAN:
-		tokens = StrSplit("3456411898 2148013393 33607 0 0 0 0 0 ", " ");
+		tokens = StrSplit("3456411898 2148013393 49991 0 0 0 0 0 ", " ");
 		break;
 	case RACE_ORC:
 	case RACE_TAUREN:
@@ -6569,6 +6569,10 @@ void Player::UpdateHonor()
     uint32 RP = uint32(GetRankPoints() >= 0 ? GetRankPoints() : -1 * GetRankPoints());
     RP = int8(((RP - prk.minRP) / (prk.maxRP - prk.minRP)) * (prk.positive ? 255 : -255));
 
+	if (sWorld.getConfig(CONFIG_BOOL_PARAGON_RANK) && GetParagonLevel() > 0) {
+		m_honor_rank.rank = m_highest_rank.rank = GetParagonLevel() < 14 ? GetParagonLevel() + 4 : 18;
+		m_honor_rank.visualRank = m_highest_rank.visualRank = GetParagonLevel() < 14 ? GetParagonLevel() : 14;
+	}
 
     // NEXT RANK BAR
     // PLAYER_FIELD_HONOR_BAR
@@ -11404,7 +11408,8 @@ void Player::ApplyEnchantment(Item* item, EnchantmentSlot slot, bool apply, bool
         {
             // set duration
             uint32 duration = item->GetEnchantmentDuration(slot);
-            if (duration > 0)
+
+			if (duration > 0)
                 AddEnchantmentDuration(item, slot, duration);
         }
         else
@@ -14262,7 +14267,7 @@ bool Player::LoadFromDB(ObjectGuid guid, SqlQueryHolder* holder)
 	_LoadParagonInformation();
 	_LoadAccountMoney();
 
-    // reset stats before loading any modifiers
+	// reset stats before loading any modifiers
     InitStatsForLevel();
 
     // is it need, only in pre-2.x used and field byte removed later?

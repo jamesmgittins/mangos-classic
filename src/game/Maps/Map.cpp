@@ -1123,6 +1123,18 @@ bool Map::HasGroupedPlayers()
 	return false;
 }
 
+int Map::GetPlayersInGroup() const
+{
+	for (const auto& itr : m_mapRefManager)
+	{
+		if (!itr.getSource()->isGameMaster() && itr.getSource()->GetGroup())
+		{
+			return itr.getSource()->GetGroup()->GetMembersCount();
+		}
+	}
+	return 1;
+}
+
 uint32 Map::GetPlayersCountExceptGMs() const
 {
     uint32 count = 0;

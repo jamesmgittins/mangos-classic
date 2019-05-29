@@ -206,6 +206,7 @@ class Map : public GridRefManager<NGridType>
 		bool HasGroupedPlayers();
         bool HavePlayers() const { return !m_mapRefManager.isEmpty(); }
         uint32 GetPlayersCountExceptGMs() const;
+		int GetPlayersInGroup() const;
         bool ActiveObjectsNearGrid(uint32 x, uint32 y) const;
 
         /// Send a Packet to all players on a map

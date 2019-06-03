@@ -86,7 +86,7 @@ bool ConfusedMovementGenerator<T>::Update(T& unit, const uint32& diff)
             float destZ = i_z;
 
             // check if new random position is assigned, GetReachableRandomPosition may fail
-            if (unit.GetMap()->GetReachableRandomPosition(&unit, destX, destY, destZ, 10.0f))
+            if (unit.GetMap()->GetReachableRandomPosition(&unit, destX, destY, destZ, 10.0f) && unit.IsWithinLOS(destX, destY, destZ))
             {
                 Movement::MoveSplineInit init(unit);
                 init.MoveTo(destX, destY, destZ, true);

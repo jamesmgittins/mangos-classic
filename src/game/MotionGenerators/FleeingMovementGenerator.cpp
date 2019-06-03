@@ -35,7 +35,7 @@ void FleeingMovementGenerator<T>::_setTargetLocation(T& owner)
         return;
 
     float x, y, z;
-    if (!_getPoint(owner, x, y, z))
+    if (!_getPoint(owner, x, y, z) || !owner.IsWithinLOS(x, y, z))
     {
         // random point not found recheck later
         i_nextCheckTime.Reset(50);

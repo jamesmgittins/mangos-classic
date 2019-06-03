@@ -332,6 +332,10 @@ namespace MaNGOS
             return 0;
         }
 
+		inline float PlayerNumScaling(Map* map) {
+			return 1.0f - ((5 - map->GetPlayersInGroup()) * 0.15f);
+		}
+
         inline uint32 Gain(Player* player, Creature* target)
         {
             if (target->IsTotem() || target->IsPet() || target->IsNoXp() || target->IsCritter())
@@ -341,13 +345,15 @@ namespace MaNGOS
             if (xp_gain == 0)
                 return 0;
 
-            if (target->IsElite() && target->GetMap()->HasGroupedPlayers())
+            if (target->IsElite())
             {
                 if (target->GetMap()->IsNoRaid())
                     xp_gain *= 2.5;
                 else
                     xp_gain *= 2;
             }
+			if (target->GetMap()->IsDungeon())
+				xp_gain *= PlayerNumScaling(target->GetMap());
 
             xp_gain *= target->GetCreatureInfo()->ExperienceMultiplier;
 

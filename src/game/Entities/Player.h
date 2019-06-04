@@ -1229,6 +1229,8 @@ class Player : public Unit
         void LoadPet();
 
         uint32 m_stableSlots;
+		void SetLastHitBy(const char* name) { m_lastHitBy = name; };
+		const char* GetLastHitBy() { return m_lastHitBy; };
 
         /*********************************************************/
         /***                    GOSSIP SYSTEM                  ***/
@@ -2473,6 +2475,8 @@ class Player : public Unit
         float m_homebindX;
         float m_homebindY;
         float m_homebindZ;
+
+		const char* m_lastHitBy;
 
         uint32 m_lastFallTime;
         float  m_lastFallZ;

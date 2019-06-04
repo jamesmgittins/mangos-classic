@@ -5205,7 +5205,8 @@ SpellCastResult Spell::CheckCast(bool strict)
                     //{
                     PathFinder pathFinder(m_caster);
                     pathFinder.setPathLengthLimit(range * 1.5f);
-                    bool result = pathFinder.calculate(pos.coord_x, pos.coord_y, pos.coord_z + 20);
+
+                    bool result = pathFinder.calculate(pos.coord_x, pos.coord_y, pos.coord_z);
 
                     if (pathFinder.getPathType() & PATHFIND_SHORT)
                         return SPELL_FAILED_OUT_OF_RANGE;

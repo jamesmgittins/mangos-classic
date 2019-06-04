@@ -823,8 +823,13 @@ uint32 Unit::DealDamage(Unit* pVictim, uint32 damage, CleanDamage const* cleanDa
     if (pVictim->GetTypeId() == TYPEID_UNIT && !((Creature*)pVictim)->IsPet() && !((Creature*)pVictim)->HasLootRecipient())
         ((Creature*)pVictim)->SetLootRecipient(this);
 
-    if (health <= damage)
-        Kill(pVictim, damagetype, spellProto, durabilityLoss, duel_hasEnded);
+	if (health <= damage) {
+		if (pVictim->GetTypeId() == TYPEID_PLAYER) {
+			((Player*)pVictim)->SetLastHitBy(GetName());
+		}
+		Kill(pVictim, damagetype, spellProto, durabilityLoss, duel_hasEnded);
+	}
+        
     else                                                    // if (health <= damage)
         HandleDamageDealt(pVictim, damage, cleanDamage, damagetype, damageSchoolMask, spellProto, duel_hasEnded);
 
@@ -1006,6 +1011,11 @@ void Unit::Kill(Unit* victim, DamageEffectType damagetype, SpellEntry const* spe
 void Unit::HandleDamageDealt(Unit* victim, uint32& damage, CleanDamage const* cleanDamage, DamageEffectType damagetype, SpellSchoolMask damageSchoolMask, SpellEntry const* spellProto, bool duel_hasEnded)
 {
     DEBUG_FILTER_LOG(LOG_FILTER_DAMAGE, "DealDamageAlive");
+
+	if (victim->GetTypeId() == TYPEID_PLAYER) {
+		if (((Player*)victim)->GetSession()->IsOffline()) // players invulnerable while offline
+			return;
+	}
 
     victim->ModifyHealth(-(int32)damage);
 

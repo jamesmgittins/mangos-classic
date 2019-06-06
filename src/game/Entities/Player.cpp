@@ -2259,7 +2259,12 @@ void Player::RegenerateHealth()
     uint32 curValue = GetHealth();
     uint32 maxValue = GetMaxHealth();
 
-    if (curValue >= maxValue) return;
+	if (curValue >= maxValue) {
+		if (!GetPet())
+			return;
+		if (GetPet()->GetHealth() >= GetPet()->GetMaxHealth() || GetPet()->isDead())
+			return;
+	}
 
     float HealthIncreaseRate = sWorld.getConfig(CONFIG_FLOAT_RATE_HEALTH);
 
@@ -2292,6 +2297,16 @@ void Player::RegenerateHealth()
 
     if (addvalue < 0)
         addvalue = 0;
+
+	if (curValue >= maxValue) {
+		if (!GetPet())
+			return;
+		if (GetPet()->GetHealth() >= GetPet()->GetMaxHealth() || GetPet()->isDead())
+			return;
+
+		GetPet()->ModifyHealth(RandomRound(addvalue / 4));
+		return;
+	}
 	
     ModifyHealth(RandomRound(addvalue / 4));
 }

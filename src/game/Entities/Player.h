@@ -997,7 +997,7 @@ class Player : public Unit
 
         void GiveXP(uint32 xp, Creature* victim, float groupRate = 1.f);
         void GiveLevel(uint32 level);
-		void GiveParagonXP(uint32 xp);
+		void GiveParagonXP(uint32 xp, bool logXpGain);
 		uint32 GetParagonLevel() { return m_paragon_level; }
 		uint32 GetXpForNextParagonLevel();
 		void SetParagonLevel(uint32 paragonLevel) { m_paragon_level = paragonLevel; }

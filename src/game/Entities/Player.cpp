@@ -2573,7 +2573,7 @@ void Player::GiveXP(uint32 xp, Creature* victim, float groupRate)
 
     uint32 newXP = curXP + xp + rested_bonus_xp;
 
-	GiveParagonXP(xp + rested_bonus_xp);
+	GiveParagonXP(xp + rested_bonus_xp, false);
 
 	if (level >= sWorld.getConfig(CONFIG_UINT32_MAX_PLAYER_LEVEL))
 		return;
@@ -2592,11 +2592,14 @@ void Player::GiveXP(uint32 xp, Creature* victim, float groupRate)
     SetUInt32Value(PLAYER_XP, newXP);
 }
 
-void Player::GiveParagonXP(uint32 xp)
+void Player::GiveParagonXP(uint32 xp, bool logXpGain)
 {
 
 	if (getLevel() < sWorld.getConfig(CONFIG_UINT32_PARAGON_LVL_REQUIREMENT))
 		return;
+
+	if (logXpGain)
+		SendLogXPGain(xp, nullptr, 0, 0);
 
 	uint32 nextLvlXP = GetXpForNextParagonLevel();
 	uint32 newXP = GetParagonXP() + xp;
@@ -7559,6 +7562,15 @@ void Player::CastItemUseSpell(Item* item, SpellCastTargets const& targets, uint8
 
         ++count;
     }
+
+	if (proto->ItemId == 25901)
+		GiveParagonXP(2000, true);
+
+	if (proto->ItemId == 25902)
+		GiveParagonXP(20000, true);
+
+	if (proto->ItemId == 25903)
+		GiveParagonXP(200000, true);
 }
 
 void Player::_RemoveAllItemMods()

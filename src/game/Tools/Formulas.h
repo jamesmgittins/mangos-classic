@@ -332,8 +332,12 @@ namespace MaNGOS
             return 0;
         }
 
-		inline float PlayerNumScaling(Map* map) {
-			return 1.0f - ((5 - map->GetPlayersInGroup()) * 0.15f);
+		inline float PlayerLootScaling(Map* map) {
+			return 1.0f - ((5 - map->GetPlayersInGroup()) * 0.1f);
+		}
+
+		inline float PlayerXPScaling(Map* map) {
+			return 1.0f - ((5 - map->GetPlayersInGroup()) * 0.2f);
 		}
 
         inline uint32 Gain(Player* player, Creature* target)
@@ -353,7 +357,7 @@ namespace MaNGOS
                     xp_gain *= 2;
             }
 			if (target->GetMap()->IsDungeon())
-				xp_gain *= PlayerNumScaling(target->GetMap());
+				xp_gain *= PlayerXPScaling(target->GetMap());
 
             xp_gain *= target->GetCreatureInfo()->ExperienceMultiplier;
 

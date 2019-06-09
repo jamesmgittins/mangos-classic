@@ -2262,7 +2262,7 @@ void Player::RegenerateHealth()
 	if (curValue >= maxValue) {
 		if (!GetPet())
 			return;
-		if (GetPet()->GetHealth() >= GetPet()->GetMaxHealth() || GetPet()->isDead())
+		if (GetPet()->GetHealth() >= GetPet()->GetMaxHealth() || !GetPet()->isAlive())
 			return;
 	}
 
@@ -2295,13 +2295,16 @@ void Player::RegenerateHealth()
     // always regeneration bonus (including combat)
     addvalue += GetTotalAuraModifier(SPELL_AURA_MOD_HEALTH_REGEN_IN_COMBAT);
 
-    if (addvalue < 0)
-        addvalue = 0;
+	if (addvalue < 0) {
+		addvalue = 0;
+		return;
+	}
+        
 
 	if (curValue >= maxValue) {
 		if (!GetPet())
 			return;
-		if (GetPet()->GetHealth() >= GetPet()->GetMaxHealth() || GetPet()->isDead())
+		if (GetPet()->GetHealth() >= GetPet()->GetMaxHealth() || !GetPet()->isAlive())
 			return;
 
 		GetPet()->ModifyHealth(RandomRound(addvalue / 4));

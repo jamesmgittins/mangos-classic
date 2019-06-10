@@ -1720,7 +1720,7 @@ Creature* WorldObject::SummonCreature(uint32 id, float x, float y, float z, floa
         delete pCreature;
         return nullptr;
     }
-
+	
     pCreature->SetRespawnCoord(pos);
 
     // Set run or walk before any other movement starts

@@ -5637,8 +5637,8 @@ SpellCastResult Spell::CheckCast(bool strict)
                 if (!expectedTarget)
                     return SPELL_FAILED_BAD_TARGETS;
 
-                // Target must be a weapon wielder
-                if (!expectedTarget->hasMainhandWeapon())
+                // Target must be a weapon wielder unless riposte
+                if (!expectedTarget->hasMainhandWeapon() && m_spellInfo->SpellFamilyName != SPELLFAMILY_ROGUE)
                     return SPELL_FAILED_BAD_TARGETS;
 
                 break;

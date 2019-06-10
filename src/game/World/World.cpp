@@ -445,6 +445,7 @@ void World::LoadConfigSettings(bool reload)
 
 	setConfigPos(CONFIG_FLOAT_RATE_FLIGHT_PATH_SPEED, "Rate.Flight.Path.Speed", 32.0f);
 	setConfigPos(CONFIG_FLOAT_GOBLIN_SPAWN_CHANCE, "Rate.Goblin.Spawn.Chance", 0.0f);
+	setConfig(CONFIG_BOOL_GOBLIN_ANNOUNCEMENT, "Goblin.Announcement", false);
     setConfigMinMax(CONFIG_FLOAT_RATE_TARGET_POS_RECALCULATION_RANGE, "TargetPosRecalculateRange", 1.5f, CONTACT_DISTANCE, ATTACK_DISTANCE);
 
     setConfigPos(CONFIG_FLOAT_RATE_DURABILITY_LOSS_DAMAGE, "DurabilityLossChance.Damage", 0.5f);

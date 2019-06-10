@@ -1669,86 +1669,94 @@ void Creature::SetDeathState(DeathState s)
 
         Unit::SetDeathState(CORPSE);
 
+		if (GetOriginalLootRecipient()) {
 
-		// attempt a temporary spawn on creature death
-		if (roll_chance_f(sWorld.getConfig(CONFIG_FLOAT_GOBLIN_SPAWN_CHANCE))) {
+			// attempt a temporary spawn on creature death
+			if (roll_chance_f(sWorld.GetGoblinChance())) {
 
-			uint32 spawnId = 0;
+				uint32 spawnId = 0;
 
-			if (getLevel() > 19) {
-				spawnId = 25001;
-			}
-			if (getLevel() > 21) {
-				spawnId = 25002;
-			}
-			if (getLevel() > 23) {
-				spawnId = 25003;
-			}
-			if (getLevel() > 25) {
-				spawnId = 25004;
-			}
-			if (getLevel() > 27) {
-				spawnId = 25005;
-			}
-			if (getLevel() > 29) {
-				spawnId = 25006;
-			}
-			if (getLevel() > 31) {
-				spawnId = 25007;
-			}
-			if (getLevel() > 33) {
-				spawnId = 25008;
-			}
-			if (getLevel() > 35) {
-				spawnId = 25009;
-			}
-			if (getLevel() > 37) {
-				spawnId = 25010;
-			}
-			if (getLevel() > 39) {
-				spawnId = 25011;
-			}
-			if (getLevel() > 41) {
-				spawnId = 25012;
-			}
-			if (getLevel() > 43) {
-				spawnId = 25013;
-			}
-			if (getLevel() > 45) {
-				spawnId = 25014;
-			}
-			if (getLevel() > 47) {
-				spawnId = 25015;
-			}
-			if (getLevel() > 49) {
-				spawnId = 25016;
-			}
-			if (getLevel() > 51) {
-				spawnId = 25017;
-			}
-			if (getLevel() > 53) {
-				spawnId = 25018;
-			}
-			if (getLevel() > 55) {
-				spawnId = 25019;
-			}
-			if (getLevel() > 57) {
-				spawnId = 25020;
-			}
-			if (spawnId != 0) {
-				Creature* pCreature;
-				pCreature = Creature::SummonCreature(spawnId, 0.0f, 0.0f, 0.0f, 0.0f, TEMPSPAWN_TIMED_OOC_DESPAWN, 30000);
-
-				if (!pCreature) {
-					sLog.outErrorEventAI("Failed to spawn creature %u.", spawnId);
+				if (getLevel() > 19) {
+					spawnId = 25001;
 				}
-				else {
-					
+				if (getLevel() > 21) {
+					spawnId = 25002;
 				}
-					
+				if (getLevel() > 23) {
+					spawnId = 25003;
+				}
+				if (getLevel() > 25) {
+					spawnId = 25004;
+				}
+				if (getLevel() > 27) {
+					spawnId = 25005;
+				}
+				if (getLevel() > 29) {
+					spawnId = 25006;
+				}
+				if (getLevel() > 31) {
+					spawnId = 25007;
+				}
+				if (getLevel() > 33) {
+					spawnId = 25008;
+				}
+				if (getLevel() > 35) {
+					spawnId = 25009;
+				}
+				if (getLevel() > 37) {
+					spawnId = 25010;
+				}
+				if (getLevel() > 39) {
+					spawnId = 25011;
+				}
+				if (getLevel() > 41) {
+					spawnId = 25012;
+				}
+				if (getLevel() > 43) {
+					spawnId = 25013;
+				}
+				if (getLevel() > 45) {
+					spawnId = 25014;
+				}
+				if (getLevel() > 47) {
+					spawnId = 25015;
+				}
+				if (getLevel() > 49) {
+					spawnId = 25016;
+				}
+				if (getLevel() > 51) {
+					spawnId = 25017;
+				}
+				if (getLevel() > 53) {
+					spawnId = 25018;
+				}
+				if (getLevel() > 55) {
+					spawnId = 25019;
+				}
+				if (getLevel() > 57) {
+					spawnId = 25020;
+				}
+				if (spawnId != 0) {
+					Creature* pCreature;
+					pCreature = Creature::SummonCreature(spawnId, 0.0f, 0.0f, 0.0f, 0.0f, TEMPSPAWN_TIMED_OOC_DESPAWN, 30000);
+
+					if (!pCreature) {
+						sLog.outErrorEventAI("Failed to spawn creature %u.", spawnId);
+					}
+					else {
+						pCreature->MonsterYell("Haha Too Slow! The loot is mine now!", LANG_UNIVERSAL, GetOriginalLootRecipient());
+						sWorld.UpdateLastGoblinTime();
+						if (sWorld.getConfig(CONFIG_BOOL_GOBLIN_ANNOUNCEMENT))
+							sWorld.WorldMessage("A %s is trying to steal %s's items!", pCreature->GetName(), GetOriginalLootRecipient()->GetName());
+					}
+
+				}
 			}
+
+			// end attempt
+
 		}
-		// end attempt
+
     }
 
     if (s == JUST_ALIVED)

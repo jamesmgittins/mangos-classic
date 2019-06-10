@@ -2371,6 +2371,7 @@ class Player : public Unit
         typedef std::list<Channel*> JoinedChannelsList;
         JoinedChannelsList m_channels;
 
+
         uint32 m_cinematic;
 
         TradeData* m_trade;

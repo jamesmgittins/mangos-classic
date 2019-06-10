@@ -359,7 +359,8 @@ enum eConfigBoolValues
 	CONFIG_BOOL_GOLD_ACCOUNT_WIDE,
 	CONFIG_BOOL_BANK_ACCOUNT_WIDE,
 	CONFIG_BOOL_ALWAYS_REMOVE_CREATURE_STEALTH,
-	CONFIG_BOOL_PARAGON_RANK
+	CONFIG_BOOL_PARAGON_RANK,
+	CONFIG_BOOL_GOBLIN_ANNOUNCEMENT
 };
 
 /// Type of server
@@ -457,6 +458,12 @@ class World
 
         /// Set the active session server limit (or security level limitation)
         void SetPlayerLimit(int32 limit, bool needUpdate = false);
+
+		void UpdateLastGoblinTime() { m_lastGoblinTime = GetCurrentMSTime(); };
+
+		float GetGoblinChance() {
+			return ((float)(GetCurrentMSTime() - m_lastGoblinTime) / (float)(HOUR * 500)) * getConfig(CONFIG_FLOAT_GOBLIN_SPAWN_CHANCE);
+		};
 		
         // player Queue
         typedef std::list<WorldSession*> Queue;
@@ -642,7 +649,7 @@ class World
         static uint8 m_ExitCode;
         uint32 m_ShutdownTimer;
         uint32 m_ShutdownMask;
-
+		uint32 m_lastGoblinTime = 0;
 		uint32 m_NextMaintenanceDate;
         uint32 m_MaintenanceTimeChecker;
 

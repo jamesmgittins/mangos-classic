@@ -1092,6 +1092,8 @@ void Unit::HandleDamageDealt(Unit* victim, uint32& damage, CleanDamage const* cl
         MANGOS_ASSERT(he->duel);
 
         he->SetHealth(1);
+		CastSpell(this, 17624, TRIGGERED_OLD_TRIGGERED); // Petrification Potion
+		he->CastSpell(he, 17624, TRIGGERED_OLD_TRIGGERED);
 
         he->duel->opponent->CombatStopWithPets(true);
         he->CombatStopWithPets(true);

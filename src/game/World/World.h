@@ -461,6 +461,9 @@ class World
 
 		void UpdateLastGoblinTime() { m_lastGoblinTime = GetCurrentMSTime(); };
 
+		bool NotLastGoblinPlayer(uint32 guid) { return guid != m_lastGoblinPlayer; };
+		void SetLastGoblinPlayer(uint32 guid) { m_lastGoblinPlayer = guid; };
+
 		float GetGoblinChance() {
 			return ((float)(GetCurrentMSTime() - m_lastGoblinTime) / (float)(HOUR * 500)) * getConfig(CONFIG_FLOAT_GOBLIN_SPAWN_CHANCE);
 		};
@@ -650,6 +653,7 @@ class World
         uint32 m_ShutdownTimer;
         uint32 m_ShutdownMask;
 		uint32 m_lastGoblinTime = 0;
+		uint32 m_lastGoblinPlayer = 0;
 		uint32 m_NextMaintenanceDate;
         uint32 m_MaintenanceTimeChecker;
 

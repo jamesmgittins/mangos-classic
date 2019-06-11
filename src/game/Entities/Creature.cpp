@@ -1669,71 +1669,80 @@ void Creature::SetDeathState(DeathState s)
 
         Unit::SetDeathState(CORPSE);
 
-		if (GetOriginalLootRecipient()) {
+		if (GetOriginalLootRecipient() && getLevel() > 19 && sWorld.NotLastGoblinPlayer(GetOriginalLootRecipient()->GetGUID())) {
 
 			// attempt a temporary spawn on creature death
 			if (roll_chance_f(sWorld.GetGoblinChance())) {
 
 				uint32 spawnId = 0;
+				uint32 goblinLevel = getLevel();
 
-				if (getLevel() > 19) {
+				if (goblinLevel > 50 && GetOriginalLootRecipient()->getLevel() > goblinLevel) {
+					goblinLevel = GetOriginalLootRecipient()->getLevel();
+				}
+
+				if (goblinLevel > GetOriginalLootRecipient()->getLevel()) {
+					goblinLevel = GetOriginalLootRecipient()->getLevel();
+				}
+
+				if (goblinLevel > 19) {
 					spawnId = 25001;
 				}
-				if (getLevel() > 21) {
+				if (goblinLevel > 21) {
 					spawnId = 25002;
 				}
-				if (getLevel() > 23) {
+				if (goblinLevel > 23) {
 					spawnId = 25003;
 				}
-				if (getLevel() > 25) {
+				if (goblinLevel > 25) {
 					spawnId = 25004;
 				}
-				if (getLevel() > 27) {
+				if (goblinLevel > 27) {
 					spawnId = 25005;
 				}
-				if (getLevel() > 29) {
+				if (goblinLevel > 29) {
 					spawnId = 25006;
 				}
-				if (getLevel() > 31) {
+				if (goblinLevel > 31) {
 					spawnId = 25007;
 				}
-				if (getLevel() > 33) {
+				if (goblinLevel > 33) {
 					spawnId = 25008;
 				}
-				if (getLevel() > 35) {
+				if (goblinLevel > 35) {
 					spawnId = 25009;
 				}
-				if (getLevel() > 37) {
+				if (goblinLevel > 37) {
 					spawnId = 25010;
 				}
-				if (getLevel() > 39) {
+				if (goblinLevel > 39) {
 					spawnId = 25011;
 				}
-				if (getLevel() > 41) {
+				if (goblinLevel > 41) {
 					spawnId = 25012;
 				}
-				if (getLevel() > 43) {
+				if (goblinLevel > 43) {
 					spawnId = 25013;
 				}
-				if (getLevel() > 45) {
+				if (goblinLevel > 45) {
 					spawnId = 25014;
 				}
-				if (getLevel() > 47) {
+				if (goblinLevel > 47) {
 					spawnId = 25015;
 				}
-				if (getLevel() > 49) {
+				if (goblinLevel > 49) {
 					spawnId = 25016;
 				}
-				if (getLevel() > 51) {
+				if (goblinLevel > 51) {
 					spawnId = 25017;
 				}
-				if (getLevel() > 53) {
+				if (goblinLevel > 53) {
 					spawnId = 25018;
 				}
-				if (getLevel() > 55) {
+				if (goblinLevel > 55) {
 					spawnId = 25019;
 				}
-				if (getLevel() > 57) {
+				if (goblinLevel > 57) {
 					spawnId = 25020;
 				}
 				if (spawnId != 0) {
@@ -1746,6 +1755,7 @@ void Creature::SetDeathState(DeathState s)
 					else {
 						pCreature->MonsterYell("Haha Too Slow! The loot is mine now!", LANG_UNIVERSAL, GetOriginalLootRecipient());
 						sWorld.UpdateLastGoblinTime();
+						sWorld.SetLastGoblinPlayer(GetOriginalLootRecipient()->GetGUID());
 						if (sWorld.getConfig(CONFIG_BOOL_GOBLIN_ANNOUNCEMENT))
 							sWorld.WorldMessage("A %s is trying to steal %s's items!", pCreature->GetName(), GetOriginalLootRecipient()->GetName());
 					}

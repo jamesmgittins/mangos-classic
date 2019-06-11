@@ -337,7 +337,7 @@ namespace MaNGOS
 		}
 
 		inline float PlayerXPScaling(Map* map) {
-			return 1.0f - ((5 - map->GetPlayersInGroup()) * 0.2f);
+			return 1.0f - ((5 - map->GetPlayersInGroup()) * 0.16f);
 		}
 
         inline uint32 Gain(Player* player, Creature* target)

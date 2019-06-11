@@ -2241,6 +2241,18 @@ void Player::HandleParagonLeech(uint32 damageDone)
 			SendHealSpellLog(this, 24100, healed, false);
 		}
 	}
+	/*
+
+	if (GetParagonLevel() > 0 && (this->getClass() != CLASS_WARRIOR && this->getClass() != CLASS_ROGUE)) {
+		float percentLeech = GetParagonLevel() < 10 ? GetParagonLevel() * 0.01f : 0.1f;
+		uint32 healed = RandomRound(damageDone * percentLeech);
+
+		if (healed > 0) {
+			ModifyPower(POWER_MANA, healed);
+			SendEnergizeSpellLog(this, 24100, healed, POWER_MANA);
+		}
+	}
+	*/
 }
 
 int32 Player::HandleParagonManaReduction(uint32 manaCost) {
@@ -20119,6 +20131,7 @@ void Player::_LoadParagonInformation()
 		SetParagonLevel(fields[0].GetUInt32());
 		SetParagonXP(fields[1].GetUInt32());
 	}
+	UpdateSpeed(MOVE_RUN, false, 1.0f);
 }
 
 void Player::_LoadAccountMoney()

@@ -4046,12 +4046,7 @@ void Spell::TakePower()
 
     Powers powerType = Powers(m_spellInfo->powerType);
 
-	if (m_caster->GetTypeId() == TYPEID_PLAYER && POWER_MANA == powerType) {
-		m_caster->ModifyPower(powerType, -((Player*)m_caster)->HandleParagonManaReduction(m_powerCost));
-	}
-	else {
-		m_caster->ModifyPower(powerType, -(int32)m_powerCost);
-	}    
+	m_caster->ModifyPower(powerType, -(int32)m_powerCost);
 
     // Set the five second timer
     if (powerType == POWER_MANA && m_powerCost > 0)

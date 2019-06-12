@@ -2232,7 +2232,7 @@ void Player::Regenerate(Powers power)
 
 void Player::HandleParagonLeech(uint32 damageDone)
 {
-	if (GetParagonLevel() > 0 && (this->getClass() == CLASS_WARRIOR || this->getClass() == CLASS_ROGUE)) {
+	if (GetParagonLevel() > 0 && (this->getClass() == CLASS_WARRIOR || this->getClass() == CLASS_ROGUE || IsInFeralForm())) {
 		float percentLeech = GetParagonLevel() < 10 ? GetParagonLevel() * 0.01f : 0.1f;
 		uint32 healed = RandomRound(damageDone * percentLeech);
 
@@ -2241,29 +2241,18 @@ void Player::HandleParagonLeech(uint32 damageDone)
 			SendHealSpellLog(this, 24100, healed, false);
 		}
 	}
-	/*
 
-	if (GetParagonLevel() > 0 && (this->getClass() != CLASS_WARRIOR && this->getClass() != CLASS_ROGUE)) {
+	if (GetParagonLevel() > 0 && (this->getClass() != CLASS_WARRIOR && this->getClass() != CLASS_ROGUE && !IsInFeralForm())) {
 		float percentLeech = GetParagonLevel() < 10 ? GetParagonLevel() * 0.01f : 0.1f;
 		uint32 healed = RandomRound(damageDone * percentLeech);
 
 		if (healed > 0) {
 			ModifyPower(POWER_MANA, healed);
-			SendEnergizeSpellLog(this, 24100, healed, POWER_MANA);
+			SendEnergizeSpellLog(this, 14, healed, POWER_MANA);
 		}
 	}
-	*/
 }
 
-int32 Player::HandleParagonManaReduction(uint32 manaCost) {
-
-	if (GetParagonLevel() <= 0)
-		return manaCost;
-
-	float reduction = GetParagonLevel() < 10 ? 1.0f - GetParagonLevel() * 0.01f : 0.9f;
-
-	return RandomRound(manaCost * reduction);
-}
 
 void Player::RegenerateHealth()
 {

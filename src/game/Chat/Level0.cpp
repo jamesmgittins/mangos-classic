@@ -113,7 +113,7 @@ bool ChatHandler::HandleParagonCommand(char* /*args*/)
 		int paragonResistance = chr->GetParagonLevel() * sWorld.getConfig(CONFIG_UINT32_PARAGON_RESISTANCE);
 		float paragonRunSpeed = chr->GetParagonLevel() < 60 ? chr->GetParagonLevel() / 2 : 30;
 
-		PSendSysMessage("Increasing all attributes by %u, talent points by %u, spell damage and healing done by %u, armor by %u, resistances by %u, experience earned by %u%%, run speed by %.1f%%, and allowing %u%% of health regen in combat", 
+		PSendSysMessage("Increasing all attributes by %u, talent points by %u, spell damage and healing done by %u, armor by %u, resistances by %u, experience earned by %u%%, speed by %.1f%%, and allowing %u%% of health regen in combat", 
 			chr->GetParagonLevel(), chr->GetParagonLevel(), chr->GetParagonLevel() * 2, paragonArmor, paragonResistance, paragonXp, paragonRunSpeed, paragonHealthRegen);
 
 		if (chr->getClass() == CLASS_WARRIOR || chr->getClass() == CLASS_ROGUE)

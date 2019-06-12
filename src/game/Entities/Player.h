@@ -1005,7 +1005,6 @@ class Player : public Unit
 		uint32 GetParagonXP() { return m_paragon_xp; }
 		void SetParagonXP(uint32 newXP) { m_paragon_xp = newXP; }
 		void HandleParagonLeech(uint32 damageDone);
-		int32 HandleParagonManaReduction(uint32 manaCost);
 		
         void InitStatsForLevel(bool reapplyMods = false);
 

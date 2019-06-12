@@ -1995,6 +1995,10 @@ void Unit::DealMeleeDamage(CalcDamageInfo* calcDamageInfo, bool durabilityLoss)
 
                     pVictim->DealDamage(this, damage, nullptr, SPELL_DIRECT_DAMAGE, GetSpellSchoolMask(i_spellProto), i_spellProto, true);
 
+					if (pVictim->GetTypeId() == TYPEID_PLAYER) {
+						((Player*)pVictim)->HandleParagonLeech(damage);
+					}
+
                     i = vDamageShields.begin();
                 }
                 else

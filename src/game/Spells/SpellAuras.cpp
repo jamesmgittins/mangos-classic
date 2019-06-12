@@ -4472,6 +4472,10 @@ void Aura::PeriodicTick()
 
             pCaster->DealDamage(target, pdamage, &cleanDamage, DOT, GetSpellSchoolMask(spellProto), spellProto, true);
 
+			if (pCaster->GetTypeId() == TYPEID_PLAYER) {
+				((Player*)pCaster)->HandleParagonLeech(pdamage);
+			}
+
             pCaster->ProcDamageAndSpell(ProcSystemArguments(target, procAttacker, procVictim, PROC_EX_NORMAL_HIT, pdamage, BASE_ATTACK, spellProto));
             break;
         }
@@ -4532,6 +4536,10 @@ void Aura::PeriodicTick()
 
             if (pdamage)
                 procVictim |= PROC_FLAG_TAKEN_ANY_DAMAGE;
+
+			if (pCaster->GetTypeId() == TYPEID_PLAYER) {
+				((Player*)pCaster)->HandleParagonLeech(pdamage);
+			}
 
             int32 new_damage = pCaster->DealDamage(target, pdamage, &cleanDamage, DOT, GetSpellSchoolMask(spellProto), spellProto, false);
             pCaster->ProcDamageAndSpell(ProcSystemArguments(target, procAttacker, procVictim, PROC_EX_NORMAL_HIT, pdamage, BASE_ATTACK, spellProto));

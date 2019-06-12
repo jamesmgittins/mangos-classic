@@ -1925,8 +1925,17 @@ void Spell::EffectApplyAura(SpellEffectIndex eff_idx)
 
     DEBUG_FILTER_LOG(LOG_FILTER_SPELL_CAST, "Spell: Aura is: %u", m_spellInfo->EffectApplyAuraName[eff_idx]);
 
-    Aura* aur = CreateAura(m_spellInfo, eff_idx, &m_currentBasePoints[eff_idx], m_spellAuraHolder, unitTarget, caster, m_CastItem);
-    m_spellAuraHolder->AddAura(aur, eff_idx);
+	// Mod absorbs for dungeon scaling
+	if (m_spellInfo->EffectApplyAuraName[eff_idx] == SPELL_AURA_SCHOOL_ABSORB && caster && caster->GetTypeId() == TYPEID_UNIT && caster->GetMap()->IsDungeon()) {
+		int32 adjustedValue = m_currentBasePoints[eff_idx] * ((Creature*)caster)->_GetDamageMod(((Creature*)caster)->GetCreatureInfo()->Rank, ((Creature*)caster)->GetMap());
+		Aura* aur = CreateAura(m_spellInfo, eff_idx, &adjustedValue, m_spellAuraHolder, unitTarget, caster, m_CastItem);
+		m_spellAuraHolder->AddAura(aur, eff_idx);
+	}
+	else {
+		Aura* aur = CreateAura(m_spellInfo, eff_idx, &m_currentBasePoints[eff_idx], m_spellAuraHolder, unitTarget, caster, m_CastItem);
+		m_spellAuraHolder->AddAura(aur, eff_idx);
+	}
+    
 }
 
 void Spell::EffectPowerDrain(SpellEffectIndex eff_idx)

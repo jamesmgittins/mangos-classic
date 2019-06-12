@@ -116,15 +116,15 @@ bool ChatHandler::HandleParagonCommand(char* /*args*/)
 		PSendSysMessage("Increasing all attributes by %u, talent points by %u, spell damage and healing done by %u, armor by %u, resistances by %u, experience earned by %u%%, speed by %.1f%%, and allowing %u%% of health regen in combat", 
 			chr->GetParagonLevel(), chr->GetParagonLevel(), chr->GetParagonLevel() * 2, paragonArmor, paragonResistance, paragonXp, paragonRunSpeed, paragonHealthRegen);
 
-		if (chr->getClass() == CLASS_WARRIOR || chr->getClass() == CLASS_ROGUE)
+		if (chr->getClass() == CLASS_WARRIOR || chr->getClass() == CLASS_ROGUE || chr->IsInFeralForm())
 		{
 			int paragonLifeSteal = chr->GetParagonLevel() < 10 ? chr->GetParagonLevel() * 1 : 10;
-			PSendSysMessage("Also grants %u%% lifestealing", paragonLifeSteal);
+			PSendSysMessage("Also grants %u%% damage converted to health", paragonLifeSteal);
 		}
 		else
 		{
 			int paragonManaCost = chr->GetParagonLevel() < 10 ? chr->GetParagonLevel() * 1 : 10;
-			PSendSysMessage("Also grants %u%% mana cost reduction", paragonManaCost);
+			PSendSysMessage("Also grants %u%% damage converted to mana", paragonManaCost);
 		}
 	}
 	

@@ -1632,10 +1632,10 @@ class Unit : public WorldObject
         float CalculateEffectiveCritChance(const Unit* victim, WeaponAttackType attType, const SpellEntry* ability = nullptr) const;
         float CalculateEffectiveMissChance(const Unit* victim, WeaponAttackType attType, const SpellEntry* ability = nullptr) const;
 
-        float CalculateSpellCritChance(const Unit* victim, SpellSchoolMask schoolMask, const SpellEntry* spell) const;
+        float CalculateSpellCritChance(const Unit* victim, SpellSchoolMask schoolMask, const SpellEntry* spell, bool forceAllowCrit) const;
         float CalculateSpellMissChance(const Unit* victim, SpellSchoolMask schoolMask, const SpellEntry* spell) const;
 
-        bool RollSpellCritOutcome(const Unit* victim, SpellSchoolMask schoolMask, const SpellEntry* spell) const;
+        bool RollSpellCritOutcome(const Unit* victim, SpellSchoolMask schoolMask, const SpellEntry* spell, bool forceAllowCrit) const;
 
         virtual int32 GetResistancePenetration(SpellSchools school) const;
 

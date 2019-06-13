@@ -1503,7 +1503,7 @@ void Unit::CalculateSpellDamage(SpellNonMeleeDamage* spellDamageInfo, int32 dama
     }
 
     // Check spell crit chance
-    bool crit = RollSpellCritOutcome(pVictim, damageSchoolMask, spellInfo);
+    bool crit = RollSpellCritOutcome(pVictim, damageSchoolMask, spellInfo, false);
 
     // damage bonus (per damage class)
     switch (spellInfo->DmgClass)
@@ -3452,9 +3452,9 @@ float Unit::CalculateEffectiveMissChance(const Unit* victim, WeaponAttackType at
     return std::max(0.0f, std::min(chance, 100.0f));
 }
 
-float Unit::CalculateSpellCritChance(const Unit* victim, SpellSchoolMask schoolMask, const SpellEntry* spell) const
+float Unit::CalculateSpellCritChance(const Unit* victim, SpellSchoolMask schoolMask, const SpellEntry* spell, bool forceAllowCrit) const
 {
-    if (!spell || spell->HasAttribute(SPELL_ATTR_EX2_CANT_CRIT))
+    if (!forceAllowCrit && (!spell || spell->HasAttribute(SPELL_ATTR_EX2_CANT_CRIT)))
         return 0.0f;
 
     float chance = 0.0f;
@@ -3533,12 +3533,12 @@ float Unit::CalculateSpellMissChance(const Unit* victim, SpellSchoolMask schoolM
     return std::max(minimum, std::min(chance, 100.0f));
 }
 
-bool Unit::RollSpellCritOutcome(const Unit* victim, SpellSchoolMask schoolMask, const SpellEntry* spell) const
+bool Unit::RollSpellCritOutcome(const Unit* victim, SpellSchoolMask schoolMask, const SpellEntry* spell, bool forceAllowCrit) const
 {
-    if (!CanCrit(spell, schoolMask, GetWeaponAttackType(spell)))
+    if (!forceAllowCrit && !CanCrit(spell, schoolMask, GetWeaponAttackType(spell)))
         return false;
 
-    const float chance = CalculateSpellCritChance(victim, schoolMask, spell);
+    const float chance = CalculateSpellCritChance(victim, schoolMask, spell, forceAllowCrit);
     return roll_chance_combat(chance);
 }
 

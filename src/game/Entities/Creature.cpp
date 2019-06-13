@@ -1629,10 +1629,10 @@ void Creature::SetDeathState(DeathState s)
 
         Unit::SetDeathState(CORPSE);
 
-		if (GetOriginalLootRecipient() && getLevel() > 19 && sWorld.NotLastGoblinPlayer(GetOriginalLootRecipient()->GetGUID())) {
+		if (GetOriginalLootRecipient() && getLevel() > 19) {
 
 			// attempt a temporary spawn on creature death
-			if (roll_chance_f(sWorld.GetGoblinChance())) {
+			if (roll_chance_f(sWorld.GetGoblinChance(GetOriginalLootRecipient()->GetGUID()))) {
 
 				uint32 spawnId = 0;
 				uint32 goblinLevel = getLevel();

@@ -464,8 +464,8 @@ class World
 		bool NotLastGoblinPlayer(uint32 guid) { return guid != m_lastGoblinPlayer; };
 		void SetLastGoblinPlayer(uint32 guid) { m_lastGoblinPlayer = guid; };
 
-		float GetGoblinChance() {
-			return ((float)(GetCurrentMSTime() - m_lastGoblinTime) / (float)(HOUR * 500)) * getConfig(CONFIG_FLOAT_GOBLIN_SPAWN_CHANCE);
+		float GetGoblinChance(uint32 playerId) {
+			return ((float)(GetCurrentMSTime() - m_lastGoblinTime) / (float)(HOUR * 500)) * getConfig(CONFIG_FLOAT_GOBLIN_SPAWN_CHANCE) * (NotLastGoblinPlayer(playerId) ? 1 : 0.5f);
 		};
 		
         // player Queue

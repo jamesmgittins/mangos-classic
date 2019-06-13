@@ -4444,6 +4444,11 @@ void Aura::PeriodicTick()
             else
                 pdamage = uint32(target->GetMaxHealth() * amount / 100);
 
+			bool isCrit = false;
+
+			if (pCaster->GetTypeId() == TYPEID_PLAYER)
+				isCrit = pCaster->RollSpellCritOutcome(target, GetSchoolMask(spellProto->School), spellProto, true);
+
             // SpellDamageBonus for magic spells
             if (spellProto->DmgClass == SPELL_DAMAGE_CLASS_NONE || spellProto->DmgClass == SPELL_DAMAGE_CLASS_MAGIC)
                 pdamage = target->SpellDamageBonusTaken(pCaster, spellProto, pdamage, DOT, GetStackAmount());
@@ -4466,6 +4471,9 @@ void Aura::PeriodicTick()
                 // 5..8 ticks have normal tick damage
             }
 
+			if (isCrit)
+				pdamage *= 1.5f;
+
             target->CalculateDamageAbsorbAndResist(pCaster, GetSpellSchoolMask(spellProto), DOT, pdamage, &absorb, &resist, IsReflectableSpell(spellProto), IsResistableSpell(spellProto));
 
             DETAIL_FILTER_LOG(LOG_FILTER_PERIODIC_AFFECTS, "PeriodicTick: %s attacked %s for %u dmg inflicted by %u",
@@ -4481,9 +4489,15 @@ void Aura::PeriodicTick()
             pdamage += bonus;
             const uint32 malus = (resist > 0 ? (absorb + uint32(resist)) : absorb);
             pdamage = (pdamage <= malus ? 0 : (pdamage - malus));
+			
 
-            SpellPeriodicAuraLogInfo pInfo(this, pdamage, absorb, resist, 0.0f);
-            target->SendPeriodicAuraLog(&pInfo);
+			if (isCrit) {
+				pCaster->SendSpellNonMeleeDamageLog(target, GetId(), pdamage, GetSpellSchoolMask(spellProto), absorb, resist, false, 0, true);
+			}
+			else {
+				SpellPeriodicAuraLogInfo pInfo(this, pdamage, absorb, resist, 0.0f);
+				target->SendPeriodicAuraLog(&pInfo);
+			}
 
             if (pdamage)
                 procVictim |= PROC_FLAG_TAKEN_ANY_DAMAGE;

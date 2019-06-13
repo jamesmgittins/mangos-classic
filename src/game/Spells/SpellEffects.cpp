@@ -1207,6 +1207,15 @@ void Spell::EffectDummy(SpellEffectIndex eff_idx)
 
                     return;
                 }
+                case 26899:                                 // Give Friendship Bracers
+                {
+                    if ((unitTarget && unitTarget->GetTypeId() == TYPEID_UNIT) || !unitTarget->HasAura(26898)) // Target is not a player or is not heartbroken
+                        return;
+
+                    unitTarget->RemoveAurasDueToSpell(26898);                           	// Remove Heartbroken
+                    unitTarget->CastSpell(unitTarget, 26921, TRIGGERED_OLD_TRIGGERED);		// cast Cancel Heartbroken, Create Bracelet
+                    return;
+                }
                 case 28006:                                 // Arcane Cloaking
                 {
                     // Naxxramas Entry Flag Effect DND
@@ -2190,12 +2199,20 @@ bool Spell::DoCreateItem(SpellEffectIndex eff_idx, uint32 itemtype)
         // convert to possible store amount
         if (msg == EQUIP_ERR_INVENTORY_FULL || msg == EQUIP_ERR_CANT_CARRY_MORE_OF_THIS)
             num_to_add -= no_space;
-        else
+
+        // for battleground marks send by mail if not add all expected
+        if (no_space > 0 && bgType)
         {
-            // if not created by another reason from full inventory or unique items amount limitation
-            player->SendEquipError(msg, nullptr, nullptr, newitemid);
-            return false;
+            if (BattleGround * bg = sBattleGroundMgr.GetBattleGroundTemplate(BattleGroundTypeId(bgType)))
+            {
+                bg->SendRewardMarkByMail(player, newitemid, no_space);
+                return true;
+            }
         }
+
+        // if not created by another reason from full inventory or unique items amount limitation
+        player->SendEquipError(msg, nullptr, nullptr, newitemid);
+        return false;
     }
 
     if (num_to_add)
@@ -2220,13 +2237,6 @@ bool Spell::DoCreateItem(SpellEffectIndex eff_idx, uint32 itemtype)
         // we succeeded in creating at least one item, so a levelup is possible
         if (!bgType)
             player->UpdateCraftSkill(m_spellInfo->Id);
-    }
-
-    // for battleground marks send by mail if not add all expected
-    if (no_space > 0 && bgType)
-    {
-        if (BattleGround* bg = sBattleGroundMgr.GetBattleGroundTemplate(BattleGroundTypeId(bgType)))
-            bg->SendRewardMarkByMail(player, newitemid, no_space);
     }
 
     return true;
@@ -3446,7 +3456,7 @@ void Spell::EffectTameCreature(SpellEffectIndex /*eff_idx*/)
     plr->PetSpellInitialize();
     pet->SetLoading(false);
 
-    pet->SavePetToDB(PET_SAVE_AS_CURRENT);
+    pet->SavePetToDB(PET_SAVE_AS_CURRENT, plr);
 }
 
 void Spell::EffectSummonPet(SpellEffectIndex eff_idx)
@@ -3455,13 +3465,17 @@ void Spell::EffectSummonPet(SpellEffectIndex eff_idx)
 
     Pet* NewSummon = new Pet;
 
+    Player* _player = nullptr;
+
     if (m_caster->GetTypeId() == TYPEID_PLAYER)
     {
+        _player = static_cast<Player*>(m_caster);
+
         switch (m_caster->getClass())
         {
             case CLASS_HUNTER:
             {
-                NewSummon->LoadPetFromDB((Player*)m_caster);
+                NewSummon->LoadPetFromDB(_player);
                 return;
             }
             case CLASS_WARLOCK:
@@ -3485,7 +3499,7 @@ void Spell::EffectSummonPet(SpellEffectIndex eff_idx)
                     OldSummon->Unsummon(PET_SAVE_NOT_IN_SLOT, m_caster);
 
                 // Load pet from db; if any to load
-                if (NewSummon->LoadPetFromDB((Player*)m_caster, petentry))
+                if (NewSummon->LoadPetFromDB(_player, petentry))
                     return;
 
                 NewSummon->setPetType(SUMMON_PET);
@@ -3520,7 +3534,7 @@ void Spell::EffectSummonPet(SpellEffectIndex eff_idx)
 
     // Level of pet summoned
     uint32 level = m_caster->getLevel();
-    if (m_caster->GetTypeId() != TYPEID_PLAYER)
+    if (!_player)
     {
         // pet players do not need this
         // TODO :: Totem, Pet and Critter may not use this. This is probably wrongly used and need more research.
@@ -3570,9 +3584,9 @@ void Spell::EffectSummonPet(SpellEffectIndex eff_idx)
     NewSummon->AIM_Initialize();
     NewSummon->AI()->SetReactState(REACT_DEFENSIVE);
 
-    if (m_caster->GetTypeId() == TYPEID_PLAYER)
+    if (_player)
     {
-        NewSummon->GetCharmInfo()->SetPetNumber(pet_number, (m_caster->GetTypeId() == TYPEID_PLAYER));
+        NewSummon->GetCharmInfo()->SetPetNumber(pet_number, true);
 
         // generate new name for summon pet
         NewSummon->SetName(sObjectMgr.GeneratePetName(petentry));
@@ -3582,7 +3596,7 @@ void Spell::EffectSummonPet(SpellEffectIndex eff_idx)
         NewSummon->CastOwnerTalentAuras();
         NewSummon->UpdateAllStats();
 
-        NewSummon->SavePetToDB(PET_SAVE_AS_CURRENT);
+        NewSummon->SavePetToDB(PET_SAVE_AS_CURRENT, _player);
         ((Player*)m_caster)->PetSpellInitialize();
         NewSummon->SetLoading(false);
     }
@@ -3617,7 +3631,7 @@ void Spell::EffectLearnPetSpell(SpellEffectIndex eff_idx)
     pet->SetTP(pet->m_TrainingPoints - pet->GetTPForSpell(learn_spellproto->Id));
     pet->learnSpell(learn_spellproto->Id);
 
-    pet->SavePetToDB(PET_SAVE_AS_CURRENT);
+    pet->SavePetToDB(PET_SAVE_AS_CURRENT, _player);
     _player->PetSpellInitialize();
 
     if (WorldObject const* caster = GetCastingObject())
@@ -4238,6 +4252,75 @@ void Spell::EffectScriptEffect(SpellEffectIndex eff_idx)
 
                     return;
                 }
+                case 26663:                                 // Valentine - Orgrimmar Grunt
+                case 26923:                                 // Valentine - Thunderbluff Watcher
+                case 26924:                                 // Valentine - Undercity Guardian
+                case 27541:                                 // Valentine - Darnassus Sentinel
+                case 27547:                                 // Valentine - Ironforge Guard
+                case 27548:                                 // Valentine - Stormwind City Guard
+                {
+                    if (!unitTarget || unitTarget->GetTypeId() != TYPEID_PLAYER)
+                        return;
+
+                    uint32 PledgeGiftOrHeartbroken;
+                    // Guard spellIds map [Pledge of Friendship , Pledge of Adoration]
+                    std::map<uint32, std::vector<uint32>> loveAirSpellsMapForFaction = {
+                            {11, {27242, 27510}},   // Stormwind
+                            {85, {27247, 27507}},   // Orgrimmar
+                            {57, {27244, 27506}},   // Ironforge
+                            {68, {27246, 27515}},   // Undercity Guardian
+                            {71, {27246, 27515}},   // Undercity Seeker
+                            {79, {27245, 27504}},   // Darnassus
+                            {105, {27248, 27513}}   // Thunderbluff
+                        };
+
+                    if (loveAirSpellsMapForFaction.count(m_caster->getFaction()))
+                    {
+                        if (!urand(0, 5))                       // Sets 1 in 6 chance to cast Heartbroken
+                            PledgeGiftOrHeartbroken = 26898;    // Heartbroken
+                        else if (!unitTarget->HasAura(26680))
+                        {
+                            PledgeGiftOrHeartbroken = loveAirSpellsMapForFaction[m_caster->getFaction()][1];    // Pledge of Adoration for related faction
+                            unitTarget->CastSpell(unitTarget, 26680, TRIGGERED_OLD_TRIGGERED);  // Cast Adored
+                        }
+                        else
+                            PledgeGiftOrHeartbroken = loveAirSpellsMapForFaction[m_caster->getFaction()][0];    // Pledge of Friendship for related faction
+
+                        unitTarget->CastSpell(unitTarget, PledgeGiftOrHeartbroken, TRIGGERED_OLD_TRIGGERED);
+                        m_caster->RemoveAurasDueToSpell(27741);                             // Remove Love is in the Air from guard
+                        ((Player*)unitTarget)->DestroyItemCount(21815, 1, true, false);     // Remove 1 love token on cast from inventory
+                    }
+                    return;
+                }
+                case 26678:                                 // Create Heart Candy
+                {
+                    uint32 spellId = 0;
+
+                    switch (urand(0, 7))
+                    {
+                        case 0: spellId = 26668; break;
+                        case 1: spellId = 26670; break;
+                        case 2: spellId = 26671; break;
+                        case 3: spellId = 26672; break;
+                        case 4: spellId = 26673; break;
+                        case 5: spellId = 26674; break;
+                        case 6: spellId = 26675; break;
+                        case 7: spellId = 26676; break;
+                    }
+
+                    m_caster->CastSpell(m_caster, spellId, TRIGGERED_OLD_TRIGGERED);
+                    return;
+                }
+                case 27654:                                 // Love is in the Air Test
+                {
+                    if (unitTarget->GetTypeId() != TYPEID_PLAYER)
+                    {
+                        unitTarget->SetFlag(UNIT_NPC_FLAGS, UNIT_NPC_FLAG_GOSSIP);          // Add gossip flag for NPC missing it
+                        if (!unitTarget->HasFlag(UNIT_NPC_FLAGS, UNIT_NPC_FLAG_INNKEEPER))  // Cast Amorous if caster is not an innkeeper
+                            unitTarget->CastSpell(m_caster, 26869, TRIGGERED_OLD_TRIGGERED);
+                    }
+                    return;
+                }
                 case 27687:                                 // Summon Bone Minions
                 {
                     if (!unitTarget)
@@ -4320,48 +4403,9 @@ void Spell::EffectScriptEffect(SpellEffectIndex eff_idx)
                     if (!unitTarget)
                         return;
 
-                    uint32 itemtype;
-                    uint32 rank = 0;
-                    Unit::AuraList const& mDummyAuras = unitTarget->GetAurasByType(SPELL_AURA_DUMMY);
-                    for (auto mDummyAura : mDummyAuras)
-                    {
-                        if (mDummyAura->GetId() == 18692)
-                        {
-                            rank = 1;
-                            break;
-                        }
-                        if (mDummyAura->GetId() == 18693)
-                        {
-                            rank = 2;
-                            break;
-                        }
-                    }
-
-                    static uint32 const itypes[5][3] =
-                    {
-                        { 5512, 19004, 19005},              // Minor Healthstone
-                        { 5511, 19006, 19007},              // Lesser Healthstone
-                        { 5509, 19008, 19009},              // Healthstone
-                        { 5510, 19010, 19011},              // Greater Healthstone
-                        { 9421, 19012, 19013}               // Major Healthstone
-                    };
-
-                    switch (m_spellInfo->Id)
-                    {
-                        case  6201:
-                            itemtype = itypes[0][rank]; break; // Minor Healthstone
-                        case  6202:
-                            itemtype = itypes[1][rank]; break; // Lesser Healthstone
-                        case  5699:
-                            itemtype = itypes[2][rank]; break; // Healthstone
-                        case 11729:
-                            itemtype = itypes[3][rank]; break; // Greater Healthstone
-                        case 11730:
-                            itemtype = itypes[4][rank]; break; // Major Healthstone
-                        default:
-                            return;
-                    }
-                    DoCreateItem(eff_idx, itemtype);
+                    uint32 itemType = GetUsableHealthStoneItemType(unitTarget);
+                    if (itemType)
+                        DoCreateItem(eff_idx, itemType);
                     return;
                 }
             }
@@ -5437,7 +5481,7 @@ void Spell::EffectSummonDeadPet(SpellEffectIndex /*eff_idx*/)
     pet->SetHealth(uint32(pet->GetMaxHealth() * (float(damage) / 100)));
 
     // _player->PetSpellInitialize(); // action bar not removed at death and not required send at revive
-    pet->SavePetToDB(PET_SAVE_AS_CURRENT);
+    pet->SavePetToDB(PET_SAVE_AS_CURRENT, _player);
 }
 
 void Spell::EffectDestroyAllTotems(SpellEffectIndex /*eff_idx*/)
@@ -5768,4 +5812,51 @@ void Spell::EffectBind(SpellEffectIndex eff_idx)
     data << m_caster->GetObjectGuid();
     data << uint32(area_id);
     player->SendDirectMessage(data);
+}
+
+uint32 Spell::GetUsableHealthStoneItemType(Unit* target)
+{
+    if (!target || target->GetTypeId() != TYPEID_PLAYER)
+        return 0;
+
+    uint32 itemtype;
+    uint32 rank = 0;
+    Unit::AuraList const& mDummyAuras = target->GetAurasByType(SPELL_AURA_DUMMY);
+    for (auto mDummyAura : mDummyAuras)
+    {
+        if (mDummyAura->GetId() == 18692)
+        {
+            rank = 1;
+            break;
+        }
+        if (mDummyAura->GetId() == 18693)
+        {
+            rank = 2;
+            break;
+        }
+    }
+
+    static uint32 const itypes[6][3] =
+    {
+        { 5512, 19004, 19005},              // Minor Healthstone
+        { 5511, 19006, 19007},              // Lesser Healthstone
+        { 5509, 19008, 19009},              // Healthstone
+        { 5510, 19010, 19011},              // Greater Healthstone
+        { 9421, 19012, 19013},              // Major Healthstone
+    };
+
+    switch (m_spellInfo->Id)
+    {
+        case  6201:
+            itemtype = itypes[0][rank]; break; // Minor Healthstone
+        case  6202:
+            itemtype = itypes[1][rank]; break; // Lesser Healthstone
+        case  5699:
+            itemtype = itypes[2][rank]; break; // Healthstone
+        case 11729:
+            itemtype = itypes[3][rank]; break; // Greater Healthstone
+        case 11730:
+            itemtype = itypes[4][rank]; break; // Major Healthstone
+    }
+    return itemtype;
 }

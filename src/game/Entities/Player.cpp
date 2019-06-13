@@ -998,8 +998,6 @@ uint32 Player::EnvironmentalDamage(EnvironmentalDamageType type, uint32 damage)
     damage = (damage <= malus ? 0 : (damage - malus));
 
     DamageEffectType damageType = SELF_DAMAGE;
-    if (type == DAMAGE_FALL && getClass() == CLASS_ROGUE)
-        damageType = SELF_DAMAGE_ROGUE_FALL;
 
     DealDamageMods(this, damage, &absorb, damageType);
 
@@ -15632,7 +15630,7 @@ void Player::SaveToDB()
 
     // save pet (hunter pet level and experience and all type pets health/mana).
     if (Pet* pet = GetPet())
-        pet->SavePetToDB(PET_SAVE_AS_CURRENT);
+        pet->SavePetToDB(PET_SAVE_AS_CURRENT, this);
 }
 
 // fast save function for item/money cheating preventing - save only inventory and money state
@@ -18662,11 +18660,10 @@ void Player::RewardSinglePlayerAtKill(Unit* pVictim)
     {
         Creature* creatureVictim = static_cast<Creature*>(pVictim);
         RewardReputation(creatureVictim, 1);
-        uint32 xp = MaNGOS::XP::Gain(this, creatureVictim);
-        GiveXP(xp, creatureVictim);
+        GiveXP(MaNGOS::XP::Gain(this, creatureVictim), creatureVictim);
 
         if (Pet* pet = GetPet())
-            pet->GivePetXP(xp);
+            pet->GivePetXP(MaNGOS::XP::Gain(pet, creatureVictim));
 
         // normal creature (not pet/etc) can be only in !PvP case
         if (CreatureInfo const* normalInfo = creatureVictim->GetCreatureInfo())

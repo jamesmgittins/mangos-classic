@@ -1053,7 +1053,8 @@ void Unit::HandleDamageDealt(Unit* victim, uint32& damage, CleanDamage const* cl
         }
     }
 
-    if ((damagetype == DIRECT_DAMAGE || damagetype == SPELL_DIRECT_DAMAGE || damagetype == DOT)
+    if ((damagetype == DIRECT_DAMAGE || damagetype == SPELL_DIRECT_DAMAGE
+    		|| damagetype == DOT || damagetype == SELF_DAMAGE )
         && !(spellProto && spellProto->HasAttribute(SPELL_ATTR_EX4_DAMAGE_DOESNT_BREAK_AURAS)))
     {
         int32 auraInterruptFlags = AURA_INTERRUPT_FLAG_DAMAGE;
@@ -4276,14 +4277,14 @@ bool Unit::AddSpellAuraHolder(SpellAuraHolder* holder)
     {
         if (!RemoveNoStackAurasDueToAuraHolder(holder))
         {
-            return false;                                   // couldn't remove conflicting aura with higher rank
+            return false; // couldn't remove conflicting aura with higher rank
         }
     }
 
     // update tracked aura targets list (before aura add to aura list, to prevent unexpected remove recently added aura)
     if (TrackedAuraType trackedType = holder->GetTrackedAuraType())
     {
-        if (Unit* caster = holder->GetCaster())             // caster not in world
+        if (Unit* caster = holder->GetCaster()) // caster not in world
         {
             // Only compare TrackedAuras of same tracking type
             TrackedAuraTargetMap& scTargets = caster->GetTrackedAuraTargets(trackedType);
@@ -4420,11 +4421,8 @@ bool Unit::RemoveNoStackAurasDueToAuraHolder(SpellAuraHolder* holder)
         return false;
 
     // passive spell special case (only non stackable with ranks)
-    if (IsPassiveSpell(spellProto))
-    {
-        if (IsPassiveSpellStackableWithRanks(spellProto))
-            return true;
-    }
+    if (IsPassiveSpell(spellProto) && IsPassiveSpellStackableWithRanks(spellProto))
+        return true;
 
     const uint32 spellId = holder->GetId();
     const SpellSpecific specific = GetSpellSpecific(spellId);
@@ -4453,13 +4451,19 @@ bool Unit::RemoveNoStackAurasDueToAuraHolder(SpellAuraHolder* holder)
         // Experimental: passive abilities dont stack with itself
         if (IsPassiveSpell(existingSpellProto) && (spellId != existingSpellId || !spellProto->HasAttribute(SPELL_ATTR_ABILITY)))
         {
-            // passive non-stackable spells not stackable only for same caster
-            // Experimental: exclude party passive auras from this
-            if (!own && !IsSpellHaveEffect(spellProto, SPELL_EFFECT_APPLY_AREA_AURA_PARTY))
-                continue;
-
-            // passive non-stackable spells not stackable only with another rank of same spell
-            if (!sSpellMgr.IsSpellAnotherRankOfSpell(spellId, existingSpellId))
+            // passive spells aren't stackable from the same caster
+            // Experimental: ensure party passive auras and party item buffs are still being processed
+            if (own)
+            {
+                // passive non-stackable spells not stackable only with another rank of same spell
+                if (!sSpellMgr.IsSpellAnotherRankOfSpell(spellId, existingSpellId))
+                    continue;
+            }
+            // make sure we aren't a friendly aura (these need to be checked still)
+            else if (!IsSpellHaveEffect(spellProto, SPELL_EFFECT_APPLY_AURA)
+                  && !IsSpellHaveEffect(spellProto, SPELL_EFFECT_APPLY_AREA_AURA_PARTY)
+                  && !IsSpellHaveEffect(spellProto, SPELL_EFFECT_APPLY_AREA_AURA_FRIEND)
+                  && !IsSpellHaveEffect(spellProto, SPELL_EFFECT_APPLY_AREA_AURA_PET))
                 continue;
         }
 
@@ -4486,7 +4490,7 @@ bool Unit::RemoveNoStackAurasDueToAuraHolder(SpellAuraHolder* holder)
             unique = diminished;
         }
 
-        const bool stackable = !sSpellMgr.IsNoStackSpellDueToSpell(spellProto, existingSpellProto);
+        const bool stackable = !sSpellMgr.IsNoStackSpellDueToSpellAndCastItem(holder, existing);
         if (unique || !stackable)
         {
             // check if this spell can be triggered by any talent aura
@@ -5801,15 +5805,15 @@ void Unit::MeleeAttackStop(Unit* victim)
 
 struct CombatStopWithPetsHelper
 {
-    explicit CombatStopWithPetsHelper(bool _includingCast) : includingCast(_includingCast) {}
-    void operator()(Unit* unit) const { unit->CombatStop(includingCast); }
-    bool includingCast;
+    explicit CombatStopWithPetsHelper(bool _includingCast, bool _includingCombo) : includingCast(_includingCast), includingCombo(_includingCombo) {}
+    void operator()(Unit* unit) const { unit->CombatStop(includingCast, includingCombo); }
+    bool includingCast, includingCombo;
 };
 
-void Unit::CombatStopWithPets(bool includingCast)
+void Unit::CombatStopWithPets(bool includingCast, bool includingCombo)
 {
-    CombatStop(includingCast);
-    CallForAllControlledUnits(CombatStopWithPetsHelper(includingCast), CONTROLLED_PET | CONTROLLED_GUARDIANS | CONTROLLED_CHARM);
+    CombatStop(includingCast, includingCombo);
+    CallForAllControlledUnits(CombatStopWithPetsHelper(includingCast, includingCombo), CONTROLLED_PET | CONTROLLED_GUARDIANS | CONTROLLED_CHARM);
 }
 
 void Unit::RemoveAllAttackers()
@@ -8902,6 +8906,7 @@ void Unit::RemoveFromWorld()
     // cleanup
     if (IsInWorld())
     {
+        CombatStop();
         RemoveNotOwnTrackedTargetAuras();
         BreakCharmOutgoing();
         BreakCharmIncoming();
@@ -8921,7 +8926,6 @@ void Unit::CleanupsBeforeDelete()
     {
         InterruptNonMeleeSpells(true);
         m_events.KillAllEvents(false);                      // non-delatable (currently casted spells) will not deleted now but it will deleted at call in Map::RemoveAllObjectsInRemoveList
-        CombatStop();
         ClearComboPointHolders();
         RemoveAllAuras(AURA_REMOVE_BY_DELETE);
     }
@@ -10785,7 +10789,9 @@ void Unit::Uncharm(Unit* charmed, uint32 spellId)
     Creature* charmedCreature = nullptr;
     CharmInfo* charmInfo = charmed->GetCharmInfo();
 
-    charmed->SetEvade(EVADE_NONE); // if charm expires mid evade clear evade since movement is also cleared - TODO: maybe should be done on HomeMovementGenerator::MovementExpires?
+    // if charm expires mid evade clear evade since movement is also cleared
+    // TODO: maybe should be done on HomeMovementGenerator::MovementExpires
+    charmed->SetEvade(EVADE_NONE); 
 
     if (charmed->GetTypeId() == TYPEID_UNIT)
     {

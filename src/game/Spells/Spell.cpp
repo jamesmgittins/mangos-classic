@@ -2988,11 +2988,7 @@ void Spell::cast(bool skipCheck)
     SpellCastResult castResult = CheckPower();
     if (castResult != SPELL_CAST_OK)
     {
-        SendCastResult(castResult);
-        SendInterrupted(castResult);
-        finish(false);
-        m_caster->DecreaseCastCounter();
-        SetExecutedCurrently(false);
+        StopCast(castResult);
         return;
     }
 
@@ -3002,11 +2998,7 @@ void Spell::cast(bool skipCheck)
         castResult = CheckCast(false);
         if (castResult != SPELL_CAST_OK)
         {
-            SendCastResult(castResult);
-            SendInterrupted(castResult);
-            finish(false);
-            m_caster->DecreaseCastCounter();
-            SetExecutedCurrently(false);
+            StopCast(castResult);
             return;
         }
     }
@@ -4085,7 +4077,7 @@ void Spell::TakeAmmo() const
 
 void Spell::TakeReagents()
 {
-    if (m_caster->GetTypeId() != TYPEID_PLAYER)
+    if (!m_caster->IsPlayer())
         return;
 
     if (IgnoreItemRequirements())                           // reagents used in triggered spell removed by original spell or don't must be removed.
@@ -5666,6 +5658,23 @@ SpellCastResult Spell::CheckCast(bool strict)
             return SPELL_FAILED_NOT_TRADING;
     }
 
+    switch (m_spellInfo->Id)
+    {
+        case 27230: // Health Stone
+        case 11730:
+        case 11729:
+        case 6202:
+        case 6201:
+        case 5699:
+        {
+            // check if we already have a healthstone
+            uint32 itemType = GetUsableHealthStoneItemType(m_caster);
+            if (itemType && m_caster->IsPlayer() && ((Player*)m_caster)->GetItemCount(itemType) > 0)
+                return SPELL_FAILED_TOO_MANY_OF_ITEM;
+            break;
+        }
+    }
+
     if (m_caster->GetTypeId() == TYPEID_PLAYER && m_spellInfo->HasAttribute(SPELL_ATTR_EX2_TAME_BEAST))
     {
         Player* player = (Player*)m_caster;
@@ -6279,10 +6288,14 @@ SpellCastResult Spell::CheckItems()
         {
             case SPELL_EFFECT_CREATE_ITEM:
             {
+                // check requirement at spell end
+                if (m_spellState == SPELL_STATE_TARGETING)
+                    break;
+
                 if (!m_IsTriggeredSpell && m_spellInfo->EffectItemType[i])
                 {
                     ItemPosCountVec dest;
-                    InventoryResult msg = playerTarget->CanStoreNewItem(NULL_BAG, NULL_SLOT, dest, m_spellInfo->EffectItemType[i], 1);
+                    InventoryResult msg = playerTarget->CanStoreNewItem(NULL_BAG, NULL_SLOT, dest, m_spellInfo->EffectItemType[i], CalculateDamage(SpellEffectIndex(i), m_caster));
                     if (msg != EQUIP_ERR_OK)
                     {
                         p_caster->SendEquipError(msg, nullptr, nullptr, m_spellInfo->EffectItemType[i]);
@@ -6890,7 +6903,7 @@ bool SpellEvent::Execute(uint64 e_time, uint32 p_time)
 
     // spell processing not complete, plan event on the next update interval
     m_Spell->GetCaster()->m_events.AddEvent(this, e_time + 1, false);
-    return false;                                           // event not complete
+    return false; // event not complete
 }
 
 void SpellEvent::Abort(uint64 /*e_time*/)
@@ -7208,4 +7221,13 @@ void Spell::OnSuccessfulSpellFinish()
             break;
         }
     }
+}
+
+void Spell::StopCast(SpellCastResult castResult)
+{
+    SendCastResult(castResult);
+    SendInterrupted(castResult);
+    finish(false);
+    m_caster->DecreaseCastCounter();
+    SetExecutedCurrently(false);
 }

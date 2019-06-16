@@ -45,7 +45,7 @@ void FleeingMovementGenerator<T>::_setTargetLocation(T& owner)
     owner.addUnitState(UNIT_STAT_FLEEING_MOVE);
 
     PathFinder path(&owner);
-    path.setPathLengthLimit(30.0f);
+    path.setPathLengthLimit(10.0f);
     path.calculate(x, y, z);
     if (path.getPathType() & PATHFIND_NOPATH)
     {

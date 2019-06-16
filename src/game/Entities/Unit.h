@@ -46,6 +46,14 @@
 
 #include <list>
 
+enum DungeonTrinkets
+{
+	DUNGEON_TRINKET_1 = 25904,
+	DUNGEON_TRINKET_2 = 25905,
+	DUNGEON_TRINKET_3 = 25906,
+	DUNGEON_TRINKET_4 = 25907,
+};
+
 enum SpellInterruptFlags
 {
     SPELL_INTERRUPT_FLAG_MOVEMENT     = 0x01,

@@ -6537,6 +6537,33 @@ uint32 Unit::SpellDamageBonusTaken(Unit* pCaster, SpellEntry const* spellProto, 
     float TakenTotalMod = 1.0f;
     int32 TakenTotal = 0;
 
+	// Special Dungeon Items
+	if (GetMap()->IsDungeon()) {
+		
+		if (const Player * player = GetControllingPlayer(true))
+		{
+			if (player->HasItemWithIdEquipped(DUNGEON_TRINKET_1, 1))
+				TakenTotalMod = 0.9f;
+			if (player->HasItemWithIdEquipped(DUNGEON_TRINKET_2, 1))
+				TakenTotalMod = 0.8f;
+			if (player->HasItemWithIdEquipped(DUNGEON_TRINKET_3, 1))
+				TakenTotalMod = 0.7f;
+			if (player->HasItemWithIdEquipped(DUNGEON_TRINKET_4, 1))
+				TakenTotalMod = 0.6f;
+		}
+
+		if (const Player * player = pCaster->GetControllingPlayer(true)) {
+			if (player->HasItemWithIdEquipped(DUNGEON_TRINKET_1, 1))
+				TakenTotalMod = 1.1f;
+			if (player->HasItemWithIdEquipped(DUNGEON_TRINKET_2, 1))
+				TakenTotalMod = 1.2f;
+			if (player->HasItemWithIdEquipped(DUNGEON_TRINKET_3, 1))
+				TakenTotalMod = 1.3f;
+			if (player->HasItemWithIdEquipped(DUNGEON_TRINKET_4, 1))
+				TakenTotalMod = 1.4f;
+		}
+	}
+
     // ..taken
     TakenTotalMod *= GetTotalAuraMultiplierByMiscMask(SPELL_AURA_MOD_DAMAGE_PERCENT_TAKEN, schoolMask);
 
@@ -7065,6 +7092,33 @@ uint32 Unit::MeleeDamageBonusTaken(Unit* pCaster, uint32 pdamage, WeaponAttackTy
     // PERCENT damage auras
     // ====================
     float TakenPercent  = 1.0f;
+
+	// Special Dungeon Items
+	if (GetMap()->IsDungeon()) {
+
+		if (const Player * player = GetControllingPlayer(true))
+		{
+			if (player->HasItemWithIdEquipped(DUNGEON_TRINKET_1, 1))
+				TakenPercent = 0.9f;
+			if (player->HasItemWithIdEquipped(DUNGEON_TRINKET_2, 1))
+				TakenPercent = 0.8f;
+			if (player->HasItemWithIdEquipped(DUNGEON_TRINKET_3, 1))
+				TakenPercent = 0.7f;
+			if (player->HasItemWithIdEquipped(DUNGEON_TRINKET_4, 1))
+				TakenPercent = 0.6f;
+		}
+
+		if (const Player * player = pCaster->GetControllingPlayer(true)) {
+			if (player->HasItemWithIdEquipped(DUNGEON_TRINKET_1, 1))
+				TakenPercent = 1.1f;
+			if (player->HasItemWithIdEquipped(DUNGEON_TRINKET_2, 1))
+				TakenPercent = 1.2f;
+			if (player->HasItemWithIdEquipped(DUNGEON_TRINKET_3, 1))
+				TakenPercent = 1.3f;
+			if (player->HasItemWithIdEquipped(DUNGEON_TRINKET_4, 1))
+				TakenPercent = 1.4f;
+		}
+	}
 
     // ..taken pct (by school mask)
     TakenPercent *= GetTotalAuraMultiplierByMiscMask(SPELL_AURA_MOD_DAMAGE_PERCENT_TAKEN, schoolMask);

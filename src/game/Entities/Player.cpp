@@ -17646,6 +17646,9 @@ bool Player::CanJoinToBattleground() const
     if (GetDummyAura(26013))
         return false;
 
+	if (isDead())
+		return false;
+
     return true;
 }
 

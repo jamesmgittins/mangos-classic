@@ -93,6 +93,7 @@ int32 CalculateSpellDuration(SpellEntry const* spellInfo, Unit const* caster)
         }
     }
 
+	if (caster && duration > 60000 && caster->GetTypeId() == TYPEID_UNIT)
 		duration = 60000;
 
     return duration;

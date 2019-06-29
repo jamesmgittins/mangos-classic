@@ -93,6 +93,8 @@ int32 CalculateSpellDuration(SpellEntry const* spellInfo, Unit const* caster)
         }
     }
 
+		duration = 60000;
+
     return duration;
 }
 

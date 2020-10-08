@@ -23,7 +23,7 @@ EndScriptData
 
 */
 
-#include "AI/ScriptDevAI/include/precompiled.h"/* ContentData
+#include "AI/ScriptDevAI/include/sc_common.h"/* ContentData
 npc_00x09hl
 npc_rinji
 EndContentData */
@@ -69,13 +69,13 @@ struct npc_00x09hlAI : public npc_escortAI
     {
         switch (uiPointId)
         {
-            case 26:
+            case 27:
                 DoScriptText(SAY_OOX_AMBUSH, m_creature);
                 break;
-            case 43:
+            case 44:
                 DoScriptText(SAY_OOX_AMBUSH, m_creature);
                 break;
-            case 64:
+            case 65:
                 DoScriptText(SAY_OOX_END, m_creature);
                 if (Player* pPlayer = GetPlayerForEscort())
                     pPlayer->RewardPlayerAndGroupAtEventExplored(QUEST_RESQUE_OOX_09, m_creature);
@@ -87,7 +87,7 @@ struct npc_00x09hlAI : public npc_escortAI
     {
         switch (uiPointId)
         {
-            case 27:
+            case 28:
                 if (m_uiSummonCount >= 3)
                     break;
 
@@ -100,7 +100,7 @@ struct npc_00x09hlAI : public npc_escortAI
                     ++m_uiSummonCount;
                 }
                 break;
-            case 44:
+            case 45:
                 if (m_uiSummonCount >= 6)
                     break;
 
@@ -149,7 +149,7 @@ bool QuestAccept_npc_00x09hl(Player* pPlayer, Creature* pCreature, const Quest* 
         DoScriptText(SAY_OOX_START, pCreature, pPlayer);
         pCreature->SetActiveObjectState(true);
         pCreature->SetStandState(UNIT_STAND_STATE_STAND);
-        pCreature->SetFactionTemporary(FACTION_ESCORT_N_FRIEND_ACTIVE);
+        pCreature->SetFactionTemporary(FACTION_ESCORT_N_FRIEND_ACTIVE, TEMPFACTION_RESTORE_RESPAWN | TEMPFACTION_TOGGLE_IMMUNE_TO_NPC);
 
         if (npc_00x09hlAI* pEscortAI = dynamic_cast<npc_00x09hlAI*>(pCreature->AI()))
             pEscortAI->Start(false, pPlayer, pQuest);
@@ -277,16 +277,16 @@ struct npc_rinjiAI : public npc_escortAI
 
         switch (uiPointId)
         {
-            case 1:
+            case 2:
                 DoScriptText(SAY_RIN_FREE, m_creature, pPlayer);
                 break;
-            case 7:
+            case 8:
                 DoSpawnAmbush(true);
                 break;
-            case 13:
+            case 14:
                 DoSpawnAmbush(false);
                 break;
-            case 17:
+            case 18:
                 DoScriptText(SAY_RIN_COMPLETE, m_creature, pPlayer);
                 pPlayer->RewardPlayerAndGroupAtEventExplored(QUEST_RINJI_TRAPPED, m_creature);
                 SetRun();
@@ -298,7 +298,7 @@ struct npc_rinjiAI : public npc_escortAI
     void UpdateEscortAI(const uint32 uiDiff) override
     {
         // Check if we have a current target
-        if (!m_creature->SelectHostileTarget() || !m_creature->getVictim())
+        if (!m_creature->SelectHostileTarget() || !m_creature->GetVictim())
         {
             if (HasEscortState(STATE_ESCORT_ESCORTING) && m_uiPostEventCount)
             {
@@ -346,6 +346,8 @@ bool QuestAccept_npc_rinji(Player* pPlayer, Creature* pCreature, const Quest* pQ
 
         if (npc_rinjiAI* pEscortAI = dynamic_cast<npc_rinjiAI*>(pCreature->AI()))
             pEscortAI->Start(false, pPlayer, pQuest);
+
+        pCreature->RemoveFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_IMMUNE_TO_NPC);
     }
     return true;
 }

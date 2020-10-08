@@ -23,7 +23,7 @@ EndScriptData
 
 */
 
-#include "AI/ScriptDevAI/include/precompiled.h"/* ContentData
+#include "AI/ScriptDevAI/include/sc_common.h"/* ContentData
 npc_gilthares
 npc_taskmaster_fizzule
 npc_twiggy_flathead
@@ -62,6 +62,12 @@ struct npc_giltharesAI : public npc_escortAI
 
     void Reset() override { }
 
+    void JustReachedHome() override 
+    {
+        npc_escortAI::JustReachedHome();
+        m_creature->SetStandState(UNIT_STAND_STATE_STAND);
+    }
+
     void WaypointReached(uint32 uiPointId) override
     {
         Player* pPlayer = GetPlayerForEscort();
@@ -71,22 +77,22 @@ struct npc_giltharesAI : public npc_escortAI
 
         switch (uiPointId)
         {
-            case 16:
+            case 17:
                 DoScriptText(SAY_GIL_AT_LAST, m_creature, pPlayer);
                 break;
-            case 17:
+            case 18:
                 DoScriptText(SAY_GIL_PROCEED, m_creature, pPlayer);
                 break;
-            case 18:
+            case 19:
                 DoScriptText(SAY_GIL_FREEBOOTERS, m_creature, pPlayer);
                 break;
-            case 37:
+            case 38:
                 DoScriptText(SAY_GIL_ALMOST, m_creature, pPlayer);
                 break;
-            case 47:
+            case 48:
                 DoScriptText(SAY_GIL_SWEET, m_creature, pPlayer);
                 break;
-            case 53:
+            case 54:
                 DoScriptText(SAY_GIL_FREED, m_creature, pPlayer);
                 pPlayer->RewardPlayerAndGroupAtEventExplored(QUEST_FREE_FROM_HOLD, m_creature);
                 break;
@@ -215,7 +221,7 @@ struct npc_taskmaster_fizzuleAI : public ScriptedAI
                 resetTimer -= diff;
         }
 
-        if (!m_creature->SelectHostileTarget() || !m_creature->getVictim())
+        if (!m_creature->SelectHostileTarget() || !m_creature->GetVictim())
             return;
 
         DoMeleeAttackIfReady();
@@ -332,12 +338,12 @@ struct npc_twiggy_flatheadAI : public ScriptedAI
     void FailEvent()
     {
         if (Creature* bigWill = m_creature->GetMap()->GetCreature(m_bigWillGuid))
-            if (bigWill->isAlive())
+            if (bigWill->IsAlive())
                 bigWill->ForcedDespawn();
 
         for (ObjectGuid guid : m_vAffrayChallengerGuidsVector)
             if (Creature* creature = m_creature->GetMap()->GetCreature(guid))
-                if (creature->isAlive())
+                if (creature->IsAlive())
                     creature->ForcedDespawn();
 
         Reset();
@@ -430,7 +436,7 @@ struct npc_twiggy_flatheadAI : public ScriptedAI
         {
             Player* pPlayer = m_creature->GetMap()->GetPlayer(m_playerGuid);
 
-            if (!pPlayer || !pPlayer->isAlive())
+            if (!pPlayer || !pPlayer->IsAlive())
             {
                 FailEvent();
                 return;
@@ -483,7 +489,7 @@ UnitAI* GetAI_npc_twiggy_flathead(Creature* pCreature)
 
 bool AreaTrigger_at_twiggy_flathead(Player* pPlayer, AreaTriggerEntry const* /*pAt*/)
 {
-    if (pPlayer->isAlive() && !pPlayer->isGameMaster() && pPlayer->GetQuestStatus(QUEST_AFFRAY) == QUEST_STATUS_INCOMPLETE)
+    if (pPlayer->IsAlive() && !pPlayer->isGameMaster() && pPlayer->GetQuestStatus(QUEST_AFFRAY) == QUEST_STATUS_INCOMPLETE)
     {
         Creature* pCreature = GetClosestCreatureWithEntry(pPlayer, NPC_TWIGGY, 30.0f);
         if (!pCreature)
@@ -552,21 +558,21 @@ struct npc_wizzlecranks_shredderAI : public npc_escortAI
     {
         switch (uiPointId)
         {
-            case 0:
+            case 1:
                 if (Player* pPlayer = GetPlayerForEscort())
                     DoScriptText(SAY_STARTUP1, m_creature, pPlayer);
                 break;
-            case 9:
+            case 10:
                 SetRun(false);
                 break;
-            case 17:
+            case 18:
                 if (Creature* pTemp = m_creature->SummonCreature(NPC_MERCENARY, 1128.489f, -3037.611f, 92.701f, 1.472f, TEMPSPAWN_TIMED_OOC_DESPAWN, 120000))
                 {
                     DoScriptText(SAY_MERCENARY, pTemp);
                     m_creature->SummonCreature(NPC_MERCENARY, 1160.172f, -2980.168f, 97.313f, 3.690f, TEMPSPAWN_TIMED_OOC_DESPAWN, 120000);
                 }
                 break;
-            case 24:
+            case 25:
                 m_bIsPostEvent = true;
                 break;
         }
@@ -576,11 +582,11 @@ struct npc_wizzlecranks_shredderAI : public npc_escortAI
     {
         switch (uiPointId)
         {
-            case 9:
+            case 10:
                 if (Player* pPlayer = GetPlayerForEscort())
                     DoScriptText(SAY_STARTUP2, m_creature, pPlayer);
                 break;
-            case 18:
+            case 19:
                 if (Player* pPlayer = GetPlayerForEscort())
                     DoScriptText(SAY_PROGRESS_1, m_creature, pPlayer);
                 SetRun();
@@ -599,7 +605,7 @@ struct npc_wizzlecranks_shredderAI : public npc_escortAI
 
     void UpdateEscortAI(const uint32 uiDiff) override
     {
-        if (!m_creature->SelectHostileTarget() || !m_creature->getVictim())
+        if (!m_creature->SelectHostileTarget() || !m_creature->GetVictim())
         {
             if (m_bIsPostEvent)
             {
@@ -657,25 +663,434 @@ UnitAI* GetAI_npc_wizzlecranks_shredder(Creature* pCreature)
     return new npc_wizzlecranks_shredderAI(pCreature);
 }
 
+enum
+{
+    SPELL_DECIMATE = 10268,
+    SPELL_SLUSH    = 10267,
+
+    SAY_STEALTH_ALERT_GALLYWIX   = -1010005,
+    SAY_STEALTH_ALERT_SILIXIZ    = -1010006,
+    SAY_STEALTH_ALERT_LOOKOUT_1  = -1010007,
+    SAY_STEALTH_ALERT_LOOKOUT_2  = -1010008,
+};
+
 struct npc_gallywixAI : public ScriptedAI
 {
-    npc_gallywixAI(Creature* pCreature) : ScriptedAI(pCreature)
+    npc_gallywixAI(Creature* creature) : ScriptedAI(creature)
     {
         Reset();
     }
 
     void Reset() override {}
 
-    void DamageTaken(Unit* /*pDealer*/, uint32& uiDamage, DamageEffectType /*damagetype*/, SpellEntry const* spellInfo) override
+    void OnStealthAlert(Unit* who) override
     {
-        if (spellInfo && spellInfo->IsFitToFamilyMask(0x0000000000800200)) // on Ambush
-            uiDamage = (m_creature->GetHealth() * 0.5); // Ambush should do 50% health in damage to this creature
+        DoScriptText(SAY_STEALTH_ALERT_GALLYWIX, m_creature, who);
+    }
+
+    void DamageTaken(Unit* /*dealer*/, uint32& damage, DamageEffectType /*damagetype*/, SpellEntry const* spellInfo) override
+    {
+        if (spellInfo && spellInfo->SpellFamilyName == SPELLFAMILY_ROGUE && spellInfo->IsFitToFamilyMask(0x0000000000800200)) // on Ambush
+            m_creature->CastSpell(nullptr, SPELL_DECIMATE, TRIGGERED_OLD_TRIGGERED);
     }
 };
 
-UnitAI* GetAI_npc_gallywix(Creature* pCreature)
+struct npc_venture_co_lookoutAI : public ScriptedAI
 {
-    return new npc_gallywixAI(pCreature);
+    npc_venture_co_lookoutAI(Creature* creature) : ScriptedAI(creature)
+    {
+        Reset();
+    }
+
+    void Reset() override {}
+
+    void OnStealthAlert(Unit* who) override
+    {
+        DoScriptText(urand(0, 1) ? SAY_STEALTH_ALERT_LOOKOUT_1 : SAY_STEALTH_ALERT_LOOKOUT_2, m_creature, who);
+    }
+
+    void DamageTaken(Unit* /*dealer*/, uint32& damage, DamageEffectType /*damagetype*/, SpellEntry const* spellInfo) override
+    {
+        if (spellInfo && spellInfo->SpellFamilyName == SPELLFAMILY_ROGUE && spellInfo->IsFitToFamilyMask(0x0000000000820000)) // on Eviscerate
+            m_creature->CastSpell(nullptr, SPELL_SLUSH, TRIGGERED_OLD_TRIGGERED);
+    }
+};
+
+struct npc_foreman_silixizAI : public ScriptedAI
+{
+    npc_foreman_silixizAI(Creature* creature) : ScriptedAI(creature)
+    {
+        Reset();
+    }
+
+    void Reset() override {}
+
+    void OnStealthAlert(Unit* who) override
+    {
+        DoScriptText(SAY_STEALTH_ALERT_SILIXIZ, m_creature, who);
+    }
+};
+
+UnitAI* GetAI_npc_gallywix(Creature* creature)
+{
+    return new npc_gallywixAI(creature);
+}
+
+UnitAI* GetAI_npc_venture_co_lookout(Creature* creature)
+{
+    return new npc_venture_co_lookoutAI(creature);
+}
+
+UnitAI* GetAI_npc_foreman_silixiz(Creature* creature)
+{
+    return new npc_foreman_silixizAI(creature);
+}
+
+/*#####
+## npc_regthar_deathgate
+#####*/
+
+enum
+{
+    QUEST_COUNTERATTACK        = 4021,
+
+    SAY_START_REGTHAR          = -1010001,
+    SAY_DEFENDER               = -1010002,
+    YELL_RETREAT               = -1010003,
+
+    NPC_REGTHAR_DEATHGATE      = 3389,
+    NPC_WARLORD_KROMZAR        = 9456,
+    NPC_HORDE_DEFENDER         = 9457,
+    NPC_HORDE_AXE_THROWER      = 9458,
+    NPC_KOLKAR_INVADER         = 9524,
+    NPC_KOLKAR_STORMSEER       = 9523,
+
+    KILL_LIMIT                 = 20
+};
+
+// respawn time in seconds
+#define COUNTERATTACK_RESPAWN_TIME_HORDE      12 // normal respawn time
+#define COUNTERATTACK_RESPAWN_TIME_HORDE_INC  1  // increased respawn time to have enough defender everytime
+#define COUNTERATTACK_RESPAWN_TIME_KOLKAR     10
+
+struct SpawnPoint
+{
+    float fX, fY, fZ, fO;
+};
+
+typedef std::vector<SpawnPoint> SpawnPointVector;
+
+static const SpawnPointVector spawnPointsHorde
+{
+    { -307.23f, -1919.84f, 91.66f, 0.64f},
+    { -281.15f, -1906.39f, 91.66f, 1.88f},
+    { -270.09f, -1901.58f, 91.66f, 1.88f},
+    { -275.24f, -1901.96f, 91.66f, 1.90f},
+    { -295.84f, -1913.58f, 91.66f, 1.86f},
+    { -221.61f, -1936.54f, 94.00f, 0.41f},
+    { -226.65f, -1927.87f, 93.24f, 0.41f},
+};
+
+static const SpawnPointVector spawnPointsKromzar
+{
+    { -281.19f, -1855.54f, 92.58f, 4.85f},
+    { -283.66f, -1858.45f, 92.47f, 4.85f},
+    { -286.50f, -1856.18f, 92.44f, 4.85f}
+};
+
+static const SpawnPointVector spawnPointsKolkar
+{
+    { -290.26f, -1860.85f, 92.48f, 3.68f},
+    { -311.46f, -1871.16f, 92.64f, 6.06f},
+    { -321.75f, -1868.48f, 93.73f, 0.30f},
+    { -338.12f, -1852.10f, 94.09f, 0.01f},
+    { -311.46f, -1847.78f, 94.93f, 6.15f},
+    { -292.02f, -1840.00f, 93.06f, 3.51f},
+    { -267.14f, -1853.97f, 93.24f, 3.52f},
+    { -267.68f, -1832.77f, 92.69f, 3.52f},
+    { -279.70f, -1845.67f, 92.81f, 3.83f},
+    { -338.99f, -1868.68f, 93.50f, 0.17f},
+    { -210.28f, -1916.22f, 92.87f, 4.89f},
+    { -209.09f, -1922.44f, 93.26f, 3.87f},
+    { -206.64f, -1924.83f, 93.78f, 2.41f},
+    { -283.57f, -1883.91f, 92.60f, 3.53f},
+    { -197.50f, -1929.31f, 94.03f, 3.51f}
+};
+
+struct npc_regthar_deathgateAI : public ScriptedAI
+{
+private:
+    struct KilledSlot
+    {
+        KilledSlot(ObjectGuid guid, TimePoint& rTime) : KilledGuid(guid), respawnTime(rTime) {}
+        ObjectGuid KilledGuid;
+        TimePoint respawnTime;
+    };
+
+    typedef std::map<ObjectGuid, uint32> SpawnPointIndexMap;
+    typedef std::list<KilledSlot> FullGuidList;
+
+    // keep track of spawned creature by saving their guid and assigned slot
+    SpawnPointIndexMap m_hordeCreatureMap;
+    SpawnPointIndexMap m_kolkarCreatureMap;
+
+    // keep track of killed creature by saving their respawntime those lists are sorted, the first one should be respawned first
+    FullGuidList m_killedHordeGuid;
+    FullGuidList m_killedKolkarGuid;
+
+    uint64 m_eventTimer;
+    uint32 m_waitSummonTimerKolkar;
+    uint32 m_waitSummonTimerHorde;
+    uint32 m_kolkarKillCount;
+    bool   m_eventStarted;
+    bool   m_isKromzarSpawned;
+
+    // Spawn one creature if there is at least one killed in killedGuidList (DB waypoint for all spawnpoint index less or equal given moveToWP argument)
+    bool SpawnCreature(SpawnPointVector const& spawnPoints, SpawnPointIndexMap& creatureSlotMap, FullGuidList& killedGuidList, uint32 entry1, uint32 entry2, int32 moveToWP = -1)
+    {
+        if (killedGuidList.empty())
+            return false;
+
+        bool result = false;
+        KilledSlot const& spawnSlot = killedGuidList.front();
+        auto itr = creatureSlotMap.find(spawnSlot.KilledGuid);
+        if (itr == creatureSlotMap.end())
+        {
+            error_log("SD2::npc_regthar_deathgateAI::SpawnCreature> Invalid GUID was present in guidList container!");
+            killedGuidList.erase(killedGuidList.begin());
+            return false;
+        }
+
+        if (spawnSlot.respawnTime < m_creature->GetMap()->GetCurrentClockTime())
+        {
+            killedGuidList.erase(killedGuidList.begin());
+            uint32 summonEntry = urand(0, 1) ? entry1 : entry2;
+            int32 spawnPointIdx = int32(itr->second);
+            SpawnPoint const& spawnPoint = spawnPoints[spawnPointIdx];
+            if (Creature * creature = m_creature->SummonCreature(summonEntry, spawnPoint.fX, spawnPoint.fY, spawnPoint.fZ, spawnPoint.fO, TEMPSPAWN_CORPSE_TIMED_DESPAWN, 40 * IN_MILLISECONDS))
+            {
+                // Force Horde NPCs spawned in main point to move towards kolkar invaders. We give them WP movement to ensure they always move there event after evade/reset. WP are handled in DB
+                if (spawnPointIdx < moveToWP)
+                    creature->GetMotionMaster()->MoveWaypoint();
+
+                // update creature map
+                creatureSlotMap[creature->GetObjectGuid()] = spawnPointIdx;
+                creatureSlotMap.erase(itr);
+                result = true;
+            }
+        }
+        return result;
+    }
+
+    // spawn all slot with given entry1/entry2 randomly and store them to SpawnPointIndexMap storage (moveTOWP is max slot index that should use DB waypoint)
+    void SpawnAllSlot(SpawnPointVector const& spawnPoints, SpawnPointIndexMap& creatureSlotMap, uint32 entry1, uint32 entry2, int32 moveToWP = -1)
+    {
+        int32 counter = 0;
+        for (auto& spawnPoint : spawnPoints)
+        {
+            uint32 summonEntry = urand(0, 1) ? entry1 : entry2;
+            if (Creature * creature = m_creature->SummonCreature(summonEntry, spawnPoint.fX, spawnPoint.fY, spawnPoint.fZ, spawnPoint.fO, TEMPSPAWN_CORPSE_TIMED_DESPAWN, 40 * IN_MILLISECONDS))
+            {
+                if (counter < moveToWP)
+                {
+                    // Force Horde NPCs spawned in main point to move towards kolkar invaders. We give them WP movement to ensure they always move there event after evade/reset. WP are handled in DB
+                    creature->GetMotionMaster()->MoveWaypoint();
+                }
+
+                creatureSlotMap[creature->GetObjectGuid()] = uint32(counter);
+                counter++;
+            }
+        }
+    }
+
+    // despawn all creature in provided SpawnPointIndexMap if they are still exist
+    void ForceDespawn(SpawnPointIndexMap& spawnPoints)
+    {
+        for (auto spawnItr : spawnPoints)
+        {
+            if (Creature * creature = m_creature->GetMap()->GetCreature(spawnItr.first))
+            {
+                if (creature->IsInCombat())
+                {
+                    // Give one minute to the NPCs still fighting before despawning them
+                    creature->ForcedDespawn(MINUTE * IN_MILLISECONDS);
+                }
+                else
+                    creature->ForcedDespawn();
+            }
+        }
+    }
+
+public:
+    npc_regthar_deathgateAI(Creature* creature) : ScriptedAI(creature) {Reset();}
+
+    void Reset()
+    {
+        m_waitSummonTimerKolkar = 0;
+        m_waitSummonTimerHorde  = 0;
+        m_kolkarKillCount       = 0;
+        m_eventTimer            = 0;
+        m_isKromzarSpawned      = false;
+        m_eventStarted          = false;
+        m_killedKolkarGuid.clear();
+        m_killedHordeGuid.clear();
+        m_hordeCreatureMap.clear();
+        m_kolkarCreatureMap.clear();
+    }
+
+    void JustRespawned()
+    {
+        FinishEvent();
+        Reset();
+    }
+
+    void StartEvent()
+    {
+        if(m_eventStarted)
+            return;
+
+        m_eventStarted         = true;
+        m_eventTimer           = 20 * MINUTE * IN_MILLISECONDS;
+ 
+        // Initial summon of NPCs, they will be resummon when killed based on their spawn point
+        SpawnAllSlot(spawnPointsHorde, m_hordeCreatureMap, NPC_HORDE_DEFENDER, NPC_HORDE_AXE_THROWER, 5);
+        SpawnAllSlot(spawnPointsKolkar, m_kolkarCreatureMap, NPC_KOLKAR_INVADER, NPC_KOLKAR_STORMSEER);
+    }
+
+    void FinishEvent()
+    {
+        // despawn all remaining creature
+        DoScriptText(YELL_RETREAT, m_creature);
+        ForceDespawn(m_hordeCreatureMap);
+        ForceDespawn(m_kolkarCreatureMap);
+
+        m_eventStarted = false;
+        m_kolkarKillCount = 0;
+    }
+
+    void SummonedCreatureJustDied(Creature* killed)
+    {
+        TimePoint respTime = m_creature->GetMap()->GetCurrentClockTime();
+        switch (killed->GetEntry())
+        {
+            case NPC_HORDE_DEFENDER:
+            case NPC_HORDE_AXE_THROWER:
+            {
+                // handle respawn time
+                if (m_killedHordeGuid.size() > 3)
+                {
+                    // speed up summon if too many defenders are dead
+                    respTime += std::chrono::seconds(COUNTERATTACK_RESPAWN_TIME_HORDE_INC);
+                }
+                else
+                    respTime += std::chrono::seconds(COUNTERATTACK_RESPAWN_TIME_HORDE);
+
+                // save the killed guid and respawn time for later use in SpawnCreature
+                m_killedHordeGuid.emplace_back(killed->GetObjectGuid(), respTime);
+
+                if (urand(0,1))
+                    DoScriptText(SAY_DEFENDER, m_creature);
+                break;
+            }
+
+            case NPC_KOLKAR_INVADER:
+            case NPC_KOLKAR_STORMSEER:
+            {
+                // handle respawn time
+                respTime += std::chrono::seconds(COUNTERATTACK_RESPAWN_TIME_KOLKAR);
+
+                // save the killed guid and respawn time for later use in SpawnCreature
+                m_killedKolkarGuid.emplace_back(killed->GetObjectGuid(), respTime);
+
+                // increment killed creature count
+                ++m_kolkarKillCount;
+                break;
+            }
+
+            case NPC_WARLORD_KROMZAR:
+            {
+                FinishEvent();
+                break;
+            }
+
+            default:
+                break;
+        }
+    }
+
+    void UpdateAI(const uint32 uiDiff)
+    {
+        if (!m_eventStarted)
+            return;
+
+        if (!m_isKromzarSpawned && m_eventTimer < uiDiff)
+            FinishEvent();
+
+        if (!m_isKromzarSpawned)
+        {
+            if (m_kolkarKillCount >= KILL_LIMIT)  // Kill count reached: spawn Warlord Kromzar and his bodyguards
+            {
+                m_creature->SummonCreature(NPC_KOLKAR_INVADER,  spawnPointsKromzar[0].fX, spawnPointsKromzar[0].fY, spawnPointsKromzar[0].fZ, spawnPointsKromzar[0].fO, TEMPSPAWN_CORPSE_TIMED_DESPAWN, 40 * IN_MILLISECONDS);
+                m_creature->SummonCreature(NPC_WARLORD_KROMZAR,  spawnPointsKromzar[1].fX, spawnPointsKromzar[1].fY, spawnPointsKromzar[1].fZ, spawnPointsKromzar[1].fO, TEMPSPAWN_CORPSE_TIMED_DESPAWN, 40 * IN_MILLISECONDS);
+                m_creature->SummonCreature(NPC_KOLKAR_STORMSEER,  spawnPointsKromzar[2].fX, spawnPointsKromzar[2].fY, spawnPointsKromzar[2].fZ, spawnPointsKromzar[2].fO, TEMPSPAWN_CORPSE_TIMED_DESPAWN, 40 * IN_MILLISECONDS);
+                m_isKromzarSpawned = true;
+                return;
+            }
+
+            // Summon Horde defender if need
+            SpawnCreature(spawnPointsHorde, m_hordeCreatureMap, m_killedHordeGuid, NPC_HORDE_DEFENDER, NPC_HORDE_AXE_THROWER, 5);
+
+            // Summon kolkar if need
+            SpawnCreature(spawnPointsKolkar, m_kolkarCreatureMap, m_killedKolkarGuid, NPC_KOLKAR_STORMSEER, NPC_KOLKAR_INVADER);
+        }
+        else    // Nothing to spawn: update all timers
+            m_eventTimer -= uiDiff;
+    }
+};
+
+UnitAI* GetAI_npc_regthar_deathgate(Creature* creature)
+{
+    return new npc_regthar_deathgateAI(creature);
+}
+
+bool GossipHello_npc_regthar_deathgate(Player* player, Creature* creature)
+{
+    if (creature->isQuestGiver())
+        player->PrepareQuestMenu(creature->GetObjectGuid());
+
+    if (player->GetQuestStatus(QUEST_COUNTERATTACK) == QUEST_STATUS_INCOMPLETE)
+    {
+        player->ADD_GOSSIP_ITEM(GOSSIP_ICON_CHAT, "Where is Warlord Krom'zar?", GOSSIP_SENDER_MAIN, GOSSIP_ACTION_INFO_DEF + 1);
+        player->SEND_GOSSIP_MENU(2533, creature->GetObjectGuid());
+        return true;
+    }
+    else
+        player->SEND_GOSSIP_MENU(2533, creature->GetObjectGuid());
+    return true;
+}
+
+bool QuestAccept_npc_regthar_deathgate(Player* player, Creature* creature, Quest const* quest)
+{
+    if (quest->GetQuestId() == QUEST_COUNTERATTACK)
+    {
+        DoScriptText(SAY_START_REGTHAR, creature, player);
+        player->CLOSE_GOSSIP_MENU();
+        if (npc_regthar_deathgateAI* regtharAI = dynamic_cast<npc_regthar_deathgateAI*>(creature->AI()))
+            regtharAI->StartEvent();
+    }
+    return true;
+}
+
+bool GossipSelect_npc_regthar_deathgate(Player* player, Creature* creature, uint32 /*sender*/, uint32 action)
+{
+    if (action == GOSSIP_ACTION_INFO_DEF + 1)
+    {
+        DoScriptText(SAY_START_REGTHAR, creature, player);
+        player->CLOSE_GOSSIP_MENU();
+        if (npc_regthar_deathgateAI* regtharAI = dynamic_cast<npc_regthar_deathgateAI*>(creature->AI()))
+            regtharAI->StartEvent();
+    }
+    return true;
 }
 
 void AddSC_the_barrens()
@@ -710,5 +1125,23 @@ void AddSC_the_barrens()
     pNewScript = new Script;
     pNewScript->Name = "npc_gallywix";
     pNewScript->GetAI = &GetAI_npc_gallywix;
+    pNewScript->RegisterSelf();
+
+    pNewScript = new Script;
+    pNewScript->Name = "npc_foreman_silixiz";
+    pNewScript->GetAI = &GetAI_npc_foreman_silixiz;
+    pNewScript->RegisterSelf();
+
+    pNewScript = new Script;
+    pNewScript->Name = "npc_venture_co_lookout";
+    pNewScript->GetAI = &GetAI_npc_venture_co_lookout;
+    pNewScript->RegisterSelf();
+
+    pNewScript = new Script;
+    pNewScript->Name = "npc_regthar_deathgate";
+    pNewScript->pGossipHello = &GossipHello_npc_regthar_deathgate;
+    pNewScript->pQuestAcceptNPC = &QuestAccept_npc_regthar_deathgate;
+    pNewScript->pGossipSelect = &GossipSelect_npc_regthar_deathgate;
+    pNewScript->GetAI = &GetAI_npc_regthar_deathgate;
     pNewScript->RegisterSelf();
 }

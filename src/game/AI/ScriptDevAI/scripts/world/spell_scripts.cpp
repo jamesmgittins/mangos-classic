@@ -23,8 +23,7 @@ EndScriptData
 
 */
 
-#include "AI/ScriptDevAI/include/precompiled.h"/* ContentData
-spell 8913
+#include "AI/ScriptDevAI/include/sc_common.h"/* ContentData
 spell 10848
 spell 17327
 spell 19512
@@ -49,11 +48,6 @@ enum
 
     NPC_CURED_DEER                      = 12299,
     NPC_CURED_GAZELLE                   = 12297,
-
-    // target morbent fel
-    SPELL_SACRED_CLEANSING              = 8913,
-    NPC_MORBENT                         = 1200,
-    NPC_WEAKENED_MORBENT                = 24782,
 
     // npcs that are only interactable while dead
     SPELL_SHROUD_OF_DEATH               = 10848,
@@ -118,18 +112,6 @@ bool EffectDummyCreature_spell_dummy_npc(Unit* pCaster, uint32 uiSpellId, SpellE
             }
             return true;
         }
-        case SPELL_SACRED_CLEANSING:
-        {
-            if (uiEffIndex == EFFECT_INDEX_1)
-            {
-                if (pCreatureTarget->GetEntry() != NPC_MORBENT)
-                    return true;
-
-                pCreatureTarget->UpdateEntry(NPC_WEAKENED_MORBENT);
-                return true;
-            }
-            return true;
-        }
         case SPELL_MELODIOUS_RAPTURE:
         {
             if (uiEffIndex == EFFECT_INDEX_0)
@@ -150,6 +132,33 @@ bool EffectDummyCreature_spell_dummy_npc(Unit* pCaster, uint32 uiSpellId, SpellE
     return false;
 }
 
+struct SpellStackingRulesOverride : public SpellScript
+{
+    enum : uint32
+    {
+        SPELL_POWER_INFUSION        = 10060,
+        SPELL_ARCANE_POWER          = 12042,
+    };
+
+    SpellCastResult OnCheckCast(Spell* spell, bool/* strict*/) const override
+    {
+        switch (spell->m_spellInfo->Id)
+        {
+            case SPELL_POWER_INFUSION:
+            {
+                // Patch 1.10.2 (2006-05-02):
+                // Power Infusion: This aura will no longer stack with Arcane Power. If you attempt to cast it on someone with Arcane Power, the spell will fail.
+                if (Unit* target = spell->m_targets.getUnitTarget())
+                    if (target->GetAuraCount(SPELL_ARCANE_POWER))
+                        return SPELL_FAILED_AURA_BOUNCED;
+                break;
+            }
+        }
+
+        return SPELL_CAST_OK;
+    }
+};
+
 void AddSC_spell_scripts()
 {
     Script* pNewScript = new Script;
@@ -157,4 +166,6 @@ void AddSC_spell_scripts()
     pNewScript->pEffectDummyNPC = &EffectDummyCreature_spell_dummy_npc;
     pNewScript->pEffectAuraDummy = &EffectAuraDummy_spell_aura_dummy_npc;
     pNewScript->RegisterSelf();
+
+    RegisterSpellScript<SpellStackingRulesOverride>("spell_stacking_rules_override");
 }

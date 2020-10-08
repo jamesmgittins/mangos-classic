@@ -167,7 +167,7 @@ void WorldSession::HandleAutoEquipItemOpcode(WorldPacket& recv_data)
     {
         _player->RemoveItem(srcbag, srcslot, true);
         _player->EquipItem(dest, pSrcItem, true);
-        _player->AutoUnequipOffhandIfNeed();
+        _player->AutoUnequipOffhandIfNeed(srcbag);
     }
     else                                                    // have currently equipped item, not simple case
     {
@@ -228,7 +228,7 @@ void WorldSession::HandleAutoEquipItemOpcode(WorldPacket& recv_data)
         else if (Player::IsEquipmentPos(src))
             _player->EquipItem(eSrc, pDstItem, true);
 
-        _player->AutoUnequipOffhandIfNeed();
+        _player->AutoUnequipOffhandIfNeed(srcbag);
     }
 }
 
@@ -673,7 +673,8 @@ void WorldSession::HandleBuyItemOpcode(WorldPacket& recv_data)
     DEBUG_LOG("WORLD: Received opcode CMSG_BUY_ITEM");
     ObjectGuid vendorGuid;
     uint32 item;
-    uint8 count, unk1;
+    uint8 count;
+    uint8 unk1; // hardcoded 1u inside TBC client
 
     recv_data >> vendorGuid >> item >> count >> unk1;
 
@@ -686,7 +687,7 @@ void WorldSession::HandleListInventoryOpcode(WorldPacket& recv_data)
 
     recv_data >> guid;
 
-    if (!GetPlayer()->isAlive())
+    if (!GetPlayer()->IsAlive())
         return;
 
     DEBUG_LOG("WORLD: Received opcode CMSG_LIST_INVENTORY");
@@ -761,7 +762,7 @@ void WorldSession::SendListInventory(ObjectGuid vendorguid) const
                             ReputationRank(pProto->RequiredReputationRank) > _player->GetReputationRank(pCreature->GetFactionTemplateEntry()->faction))
                         continue;
 
-                    if (crItem->conditionId && !sObjectMgr.IsPlayerMeetToCondition(crItem->conditionId, _player, pCreature->GetMap(), pCreature, CONDITION_FROM_VENDOR))
+                    if (crItem->conditionId && !sObjectMgr.IsConditionSatisfied(crItem->conditionId, _player, pCreature->GetMap(), pCreature, CONDITION_FROM_VENDOR))
                         continue;
                 }
 
@@ -987,7 +988,7 @@ void WorldSession::HandleAutoStoreBankItemOpcode(WorldPacket& recvPacket)
 
 void WorldSession::HandleSetAmmoOpcode(WorldPacket& recv_data)
 {
-    if (!GetPlayer()->isAlive())
+    if (!GetPlayer()->IsAlive())
     {
         GetPlayer()->SendEquipError(EQUIP_ERR_YOU_ARE_DEAD, nullptr, nullptr);
         return;
@@ -1002,17 +1003,6 @@ void WorldSession::HandleSetAmmoOpcode(WorldPacket& recv_data)
         GetPlayer()->RemoveAmmo();
     else
         GetPlayer()->SetAmmo(item);
-}
-
-void WorldSession::SendEnchantmentLog(ObjectGuid targetGuid, ObjectGuid casterGuid, uint32 itemId, uint32 spellId) const
-{
-    WorldPacket data(SMSG_ENCHANTMENTLOG, (8 + 8 + 4 + 4 + 1)); // last check 2.0.10
-    data << ObjectGuid(targetGuid);
-    data << ObjectGuid(casterGuid);
-    data << uint32(itemId);
-    data << uint32(spellId);
-    data << uint8(0);
-    SendPacket(data);
 }
 
 void WorldSession::SendItemEnchantTimeUpdate(ObjectGuid playerGuid, ObjectGuid itemGuid, uint32 slot, uint32 duration) const
@@ -1149,7 +1139,7 @@ void WorldSession::HandleWrapItemOpcode(WorldPacket& recv_data)
     {
         // after save it will be impossible to remove the item from the queue
         item->RemoveFromUpdateQueueOf(_player);
-        item->SaveToDB();                                   // item gave inventory record unchanged and can be save standalone
+        _player->SaveItemToInventory(item);
     }
     CharacterDatabase.CommitTransaction();
 

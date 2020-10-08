@@ -23,7 +23,7 @@ EndScriptData
 
 */
 
-#include "AI/ScriptDevAI/include/precompiled.h"
+#include "AI/ScriptDevAI/include/sc_common.h"
 #include "dire_maul.h"
 
 instance_dire_maul::instance_dire_maul(Map* pMap) : ScriptedInstance(pMap),
@@ -290,12 +290,12 @@ void instance_dire_maul::SetData(uint32 uiType, uint32 uiData)
                 // change faction to certian ogres
                 if (Creature* pOgre = GetSingleCreatureFromStorage(NPC_CAPTAIN_KROMCRUSH))
                 {
-                    if (pOgre->isAlive())
+                    if (pOgre->IsAlive())
                     {
                         pOgre->SetFactionTemporary(FACTION_FRIENDLY, TEMPFACTION_RESTORE_RESPAWN);
 
                         // only evade if required
-                        if (pOgre->getVictim())
+                        if (pOgre->GetVictim())
                             pOgre->AI()->EnterEvadeMode();
                     }
                 }
@@ -303,7 +303,7 @@ void instance_dire_maul::SetData(uint32 uiType, uint32 uiData)
                 if (Creature* pOgre = GetSingleCreatureFromStorage(NPC_CHORUSH))
                 {
                     // Chorush evades and yells on king death (if alive)
-                    if (pOgre->isAlive())
+                    if (pOgre->IsAlive())
                     {
                         DoScriptText(SAY_CHORUSH_KING_DEAD, pOgre);
                         pOgre->SetFactionTemporary(FACTION_FRIENDLY, TEMPFACTION_RESTORE_RESPAWN);
@@ -496,7 +496,7 @@ void instance_dire_maul::ProcessForceFieldOpening()
 
     // Let the summoners attack Immol'Thar
     Creature* pImmolThar = GetSingleCreatureFromStorage(NPC_IMMOLTHAR);
-    if (!pImmolThar || pImmolThar->isDead())
+    if (!pImmolThar || pImmolThar->IsDead())
         return;
 
     bool bHasYelled = false;
@@ -510,7 +510,7 @@ void instance_dire_maul::ProcessForceFieldOpening()
             bHasYelled = true;
         }
 
-        if (!pSummoner || pSummoner->isDead())
+        if (!pSummoner || pSummoner->IsDead())
             continue;
 
         pSummoner->AI()->AttackStart(pImmolThar);
@@ -533,7 +533,7 @@ void instance_dire_maul::SortPylonGuards()
             for (GuidList::iterator itr = m_lGeneratorGuardGUIDs.begin(); itr != m_lGeneratorGuardGUIDs.end();)
             {
                 Creature* pGuard = instance->GetCreature(*itr);
-                if (!pGuard || pGuard->isDead())    // Remove invalid guids and dead guards
+                if (!pGuard || pGuard->IsDead())    // Remove invalid guids and dead guards
                 {
                     m_lGeneratorGuardGUIDs.erase(itr++);
                     continue;
@@ -599,7 +599,7 @@ struct go_ai_fixed_trap : public GameObjectAI
 {
     go_ai_fixed_trap(GameObject* go) : GameObjectAI(go) {}
 
-    void UpdateAI(const uint32 uiDiff) override
+    void UpdateAI(const uint32 /*uiDiff*/) override
     {
         if (m_go->IsSpawned())
         {

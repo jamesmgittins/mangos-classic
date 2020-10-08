@@ -95,7 +95,9 @@ class ChatHandler
         bool ParseCommands(const char* text);
         ChatCommand const* FindCommand(char const* text);
 
-        bool isValidChatMessage(const char* message) const;
+        static bool HasEscapeSequences(const char* message);
+        static bool CheckEscapeSequences(const char* message);
+
         bool HasSentErrorMessage() const { return sentErrorMessage;}
 
         /**
@@ -123,6 +125,41 @@ class ChatHandler
             ObjectGuid const& senderGuid = ObjectGuid(), char const* senderName = nullptr,
             ObjectGuid const& targetGuid = ObjectGuid(), char const* targetName = nullptr,
             char const* channelName = nullptr, uint8 playerRank = 0);
+
+        // extraction different type params from args string, all functions update (char** args) to first unparsed tail symbol at return
+        static void  SkipWhiteSpaces(char** args);
+        bool  ExtractInt32(char** args, int32& val) const;
+        bool  ExtractOptInt32(char** args, int32& val, int32 defVal) const;
+        bool  ExtractUInt32Base(char** args, uint32& val, uint32 base) const;
+        bool  ExtractUInt32(char** args, uint32& val) const { return ExtractUInt32Base(args, val, 10); }
+        bool  ExtractOptUInt32(char** args, uint32& val, uint32 defVal) const;
+        static bool  ExtractFloat(char** args, float& val);
+        static bool  ExtractOptFloat(char** args, float& val, float defVal);
+        static char* ExtractQuotedArg(char** args, bool asis = false);
+        // string with " or [] or ' around
+        static char* ExtractLiteralArg(char** args, char const* lit = nullptr);
+        // literal string (until whitespace and not started from "['|), any or 'lit' if provided
+        static char* ExtractQuotedOrLiteralArg(char** args, bool asis = false);
+        static bool  ExtractOnOff(char** args, bool& value);
+        static char* ExtractLinkArg(char** args, char const* const* linkTypes = nullptr, int* foundIdx = nullptr, char** keyPair = nullptr, char** somethingPair = nullptr);
+        // shift-link like arg (with aditional info if need)
+        static char* ExtractArg(char** args, bool asis = false);   // any name/number/quote/shift-link strings
+        static char* ExtractOptNotLastArg(char** args);            // extract name/number/quote/shift-link arg only if more data in args for parse
+
+        char* ExtractKeyFromLink(char** text, char const* linkType, char** something1 = nullptr);
+        static char* ExtractKeyFromLink(char** text, char const* const* linkTypes, int* found_idx = nullptr, char** something1 = nullptr);
+        bool  ExtractUint32KeyFromLink(char** text, char const* linkType, uint32& value);
+
+        uint32 ExtractAccountId(char** args, std::string* accountName = nullptr, Player** targetIfNullArg = nullptr);
+        uint32 ExtractSpellIdFromLink(char** text);
+        ObjectGuid ExtractGuidFromLink(char** text);
+        GameTele const* ExtractGameTeleFromLink(char** text);
+        bool   ExtractLocationFromLink(char** text, uint32& mapid, float& x, float& y, float& z);
+        bool   ExtractRaceMask(char** text, uint32& raceMask, char const** maskName = nullptr);
+        std::string ExtractPlayerNameFromLink(char** text);
+        bool ExtractPlayerTarget(char** args, Player** player, ObjectGuid* player_guid = nullptr, std::string* player_name = nullptr);
+
+        Player* GetPlayer();
     protected:
         explicit ChatHandler() : m_session(nullptr), sentErrorMessage(false)
         {}      // for CLI subclass
@@ -165,15 +202,12 @@ class ChatHandler
         bool HandleAccountSetGmLevelCommand(char* args);
         bool HandleAccountSetPasswordCommand(char* args);
 
-        bool HandleAHBotItemsAmountCommand(char* args);
-        template <int Q>
-        bool HandleAHBotItemsAmountQualityCommand(char* args);
-        bool HandleAHBotItemsRatioCommand(char* args);
-        template <int H>
-        bool HandleAHBotItemsRatioHouseCommand(char* args);
+#ifdef BUILD_AHBOT
         bool HandleAHBotRebuildCommand(char* args);
         bool HandleAHBotReloadCommand(char* args);
         bool HandleAHBotStatusCommand(char* args);
+        bool HandleAHBotItemCommand(char* args);
+#endif
 
         bool HandleAuctionAllianceCommand(char* args);
         bool HandleAuctionGoblinCommand(char* args);
@@ -181,6 +215,8 @@ class ChatHandler
         bool HandleAuctionItemCommand(char* args);
         bool HandleAuctionCommand(char* args);
 
+        bool HandleWarnCharacterCommand(char* args);
+        bool HandleAddCharacterNoteCommand(char* args);
         bool HandleBanAccountCommand(char* args);
         bool HandleBanCharacterCommand(char* args);
         bool HandleBanIPCommand(char* args);
@@ -206,6 +242,9 @@ class ChatHandler
         bool HandleCharacterRenameCommand(char* args);
         bool HandleCharacterReputationCommand(char* args);
 
+        bool HandleChannelListCommand(char* args);
+        bool HandleChannelStaticCommand(char* args);
+
         bool HandleDebugAnimCommand(char* args);
         bool HandleDebugBattlegroundCommand(char* args);
         bool HandleDebugBattlegroundStartCommand(char* args);
@@ -229,6 +268,15 @@ class ChatHandler
         bool HandleDebugMoveflags(char* args);
         bool HandleDebugLootDropStats(char* args);
         bool HandleDebugOverflowCommand(char* args);
+        bool HandleDebugChatFreezeCommand(char* args);
+
+        bool HandleDebugObjectFlags(char* args);
+        bool HandleDebugHaveAtClientCommand(char* args);
+        bool HandleDebugIsVisibleCommand(char* args);
+
+        bool HandleDebugMaps(char* args);
+        bool HandleShowTemporarySpawnList(char* args);
+        bool HandleGridsLoadedCount(char* args);
 
         bool HandleDebugPlayCinematicCommand(char* args);
         bool HandleDebugPlaySoundCommand(char* args);
@@ -249,6 +297,9 @@ class ChatHandler
         bool HandleDebugSendSpellFailCommand(char* args);
         bool HandleDebugSendWorldState(char* args);
 
+        bool HandleSD2HelpCommand(char* args);
+        bool HandleSD2ScriptCommand(char* args);
+
         bool HandleEventListCommand(char* args);
         bool HandleEventStartCommand(char* args);
         bool HandleEventStopCommand(char* args);
@@ -263,12 +314,14 @@ class ChatHandler
         bool HandleGameObjectTargetCommand(char* args);
         bool HandleGameObjectTurnCommand(char* args);
         bool HandleGameObjectActivateCommand(char* args);
+        bool HandleGameObjectRespawnCommand(char* args);
 
         bool HandleGMCommand(char* args);
         bool HandleGMChatCommand(char* args);
         bool HandleGMFlyCommand(char* args);
         bool HandleGMListFullCommand(char* args);
         bool HandleGMListIngameCommand(char* args);
+        bool HandleGMMountUpCommand(char* args);
         bool HandleGMVisibleCommand(char* args);
 
         bool HandleGoCommand(char* args);
@@ -351,6 +404,31 @@ class ChatHandler
         bool HandleModifyHonorCommand(char* args);
         bool HandleModifyRepCommand(char* args);
         bool HandleModifyGenderCommand(char* args);
+        bool HandleModifyStrengthCommand(char* args);
+        bool HandleModifyAgilityCommand(char* args);
+        bool HandleModifyStaminaCommand(char* args);
+        bool HandleModifyIntellectCommand(char* args);
+        bool HandleModifySpiritCommand(char* args);
+        bool HandleModifyArmorCommand(char* args);
+        bool HandleModifyHolyCommand(char* args);
+        bool HandleModifyFireCommand(char* args);
+        bool HandleModifyNatureCommand(char* args);
+        bool HandleModifyFrostCommand(char* args);
+        bool HandleModifyShadowCommand(char* args);
+        bool HandleModifyArcaneCommand(char* args);
+        bool HandleModifyMeleeApCommand(char* args);
+        bool HandleModifyRangedApCommand(char* args);
+        bool HandleModifySpellPowerCommand(char* args);
+        bool HandleModifyMeleeCritCommand(char* args);
+        bool HandleModifySpellCritCommand(char* args);
+        bool HandleModifyMeleeHasteCommand(char* args);
+        bool HandleModifyRangedHasteCommand(char* args);
+        bool HandleModifySpellHasteCommand(char* args);
+        bool HandleModifyBlockCommand(char* args);
+        bool HandleModifyDodgeCommand(char* args);
+        bool HandleModifyParryCommand(char* args);
+        bool ModifyMountCommandHelper(Player* target, char* args);
+        bool ModifyStatCommandHelper(char* args, char const* statName, uint32 spellId);
 
         //-----------------------Npc Commands-----------------------
         bool HandleNpcAddCommand(char* args);
@@ -497,6 +575,7 @@ class ChatHandler
         bool HandleResetStatsCommand(char* args);
         bool HandleResetTalentsCommand(char* args);
         bool HandleResetTaxiNodesCommand(char* args);
+        bool HandleResetModsCommand(char* args);
 
         bool HandleSendItemsCommand(char* args);
         bool HandleSendMailCommand(char* args);
@@ -568,7 +647,10 @@ class ChatHandler
         bool HandlePInfoCommand(char* args);
         bool HandleMuteCommand(char* args);
         bool HandleUnmuteCommand(char* args);
+
         bool HandleMovegensCommand(char* args);
+        bool HandleComeToMeCommand(char* args);
+        bool HandleMovespeedShowCommand(char* args);
 
         bool HandleCooldownListCommand(char* args);
         bool HandleCooldownClearCommand(char* args);
@@ -596,12 +678,24 @@ class ChatHandler
         bool HandleChangeWeatherCommand(char* args);
         bool HandleKickPlayerCommand(char* args);
 
+        bool HandleTicketDiscardCommand(char* args);
+        bool HandleTicketEscalateCommand(char* args);
+        bool HandleTicketGoCommand(char* args);
+        bool HandleTicketGoNameCommand(char* args);
+        bool HandleTicketNoteCommand(char* args);
+        bool HandleTicketReadCommand(char* args);
+        bool HandleTicketResolveCommand(char* args);
+        bool HandleTicketSortCommand(char* args);
+        bool HandleTicketWhisperCommand(char* args);
         bool HandleTicketCommand(char* args);
-        bool HandleDelTicketCommand(char* args);
+
+        bool HandleTicketsListCommand(char* args);
+        bool HandleTicketsQueueCommand(char* args);
+        bool HandleTicketsCommand(char* args);
+
         bool HandleMaxSkillCommand(char* args);
         bool HandleSetSkillCommand(char* args);
         bool HandleRespawnCommand(char* args);
-        bool HandleComeToMeCommand(char* args);
         bool HandleCombatStopCommand(char* args);
         bool HandleRepairitemsCommand(char* args);
         bool HandleStableCommand(char* args);
@@ -625,6 +719,9 @@ class ChatHandler
         bool HandleLinkToggleCommand(char* args);
         bool HandleLinkCheckCommand(char* args);
 
+        // worldstate
+        bool HandleWarEffortCommand(char* args);
+
         //! Development Commands
         bool HandleSaveAllCommand(char* args);
 
@@ -634,40 +731,6 @@ class ChatHandler
         Unit*     getSelectedUnit(bool self = true) const;
         Creature* getSelectedCreature() const;
         Pet*      getSelectedPet() const;
-
-        // extraction different type params from args string, all functions update (char** args) to first unparsed tail symbol at return
-        static void  SkipWhiteSpaces(char** args);
-        bool  ExtractInt32(char** args, int32& val) const;
-        bool  ExtractOptInt32(char** args, int32& val, int32 defVal) const;
-        bool  ExtractUInt32Base(char** args, uint32& val, uint32 base) const;
-        bool  ExtractUInt32(char** args, uint32& val) const { return ExtractUInt32Base(args, val, 10); }
-        bool  ExtractOptUInt32(char** args, uint32& val, uint32 defVal) const;
-        static bool  ExtractFloat(char** args, float& val);
-        static bool  ExtractOptFloat(char** args, float& val, float defVal);
-        static char* ExtractQuotedArg(char** args, bool asis = false);
-        // string with " or [] or ' around
-        static char* ExtractLiteralArg(char** args, char const* lit = nullptr);
-        // literal string (until whitespace and not started from "['|), any or 'lit' if provided
-        static char* ExtractQuotedOrLiteralArg(char** args, bool asis = false);
-        static bool  ExtractOnOff(char** args, bool& value);
-        static char* ExtractLinkArg(char** args, char const* const* linkTypes = nullptr, int* foundIdx = nullptr, char** keyPair = nullptr, char** somethingPair = nullptr);
-        // shift-link like arg (with aditional info if need)
-        static char* ExtractArg(char** args, bool asis = false);   // any name/number/quote/shift-link strings
-        static char* ExtractOptNotLastArg(char** args);            // extract name/number/quote/shift-link arg only if more data in args for parse
-
-        char* ExtractKeyFromLink(char** text, char const* linkType, char** something1 = nullptr);
-        static char* ExtractKeyFromLink(char** text, char const* const* linkTypes, int* found_idx = nullptr, char** something1 = nullptr);
-        bool  ExtractUint32KeyFromLink(char** text, char const* linkType, uint32& value);
-
-        uint32 ExtractAccountId(char** args, std::string* accountName = nullptr, Player** targetIfNullArg = nullptr);
-        uint32 ExtractSpellIdFromLink(char** text);
-        ObjectGuid ExtractGuidFromLink(char** text);
-        GameTele const* ExtractGameTeleFromLink(char** text);
-        bool   ExtractLocationFromLink(char** text, uint32& mapid, float& x, float& y, float& z);
-        bool   ExtractRaceMask(char** text, uint32& raceMask, char const** maskName = nullptr);
-        std::string ExtractPlayerNameFromLink(char** text);
-        bool ExtractPlayerTarget(char** args, Player** player, ObjectGuid* player_guid = nullptr, std::string* player_name = nullptr);
-        // select by arg (name/link) or in-game selection online/offline player
 
         std::string petLink(std::string const& name) const { return m_session ? "|cffffffff|Hpet:" + name + "|h[" + name + "]|h|r" : name; }
         std::string playerLink(std::string const& name) const { return m_session ? "|cffffffff|Hplayer:" + name + "|h[" + name + "]|h|r" : name; }
@@ -683,7 +746,6 @@ class ChatHandler
         bool ShowPlayerListHelper(QueryResult* result, uint32* limit = nullptr, bool title = true, bool error = true);
         void ShowSpellListHelper(Player* target, SpellEntry const* spellInfo, LocaleConstant loc);
         void ShowPoolListHelper(uint16 pool_id);
-        void ShowTicket(GMTicket const* ticket);
         void ShowTriggerListHelper(AreaTriggerEntry const* atEntry);
         void ShowTriggerTargetListHelper(uint32 id, AreaTrigger const* at, bool subpart = false);
         bool LookupPlayerSearchCommand(QueryResult* result, uint32* limit = nullptr);

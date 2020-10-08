@@ -72,7 +72,7 @@ bool Totem::Create(uint32 guidlow, CreatureCreatePos& cPos, CreatureInfo const* 
 void Totem::Update(const uint32 diff)
 {
     Unit* owner = GetOwner();
-    if (!owner || !owner->isAlive() || !isAlive())
+    if (!owner || !owner->IsAlive() || !IsAlive())
     {
         UnSummon();                                         // remove self
         return;
@@ -102,18 +102,20 @@ void Totem::Summon(Unit* owner)
         owner->AI()->JustSummoned((Creature*)this);
 
     // there are some totems, which exist just for their visual appeareance
-    if (!GetSpell())
-        return;
-
-    switch (m_type)
+    for (uint32 spellId : m_spells)
     {
-        case TOTEM_PASSIVE:
-            CastSpell(this, GetSpell(), TRIGGERED_OLD_TRIGGERED);
+        if (!spellId)
             break;
-        case TOTEM_STATUE:
-            CastSpell(GetOwner(), GetSpell(), TRIGGERED_OLD_TRIGGERED);
-            break;
-        default: break;
+        switch (m_type)
+        {
+            case TOTEM_PASSIVE:
+                CastSpell(nullptr, spellId, TRIGGERED_OLD_TRIGGERED);
+                break;
+            case TOTEM_STATUE:
+                CastSpell(GetOwner(), spellId, TRIGGERED_OLD_TRIGGERED);
+                break;
+            default: break;
+        }
     }
 }
 
@@ -149,7 +151,7 @@ void Totem::UnSummon()
     }
 
     // any totem unsummon look like as totem kill, req. for proper animation
-    if (isAlive())
+    if (IsAlive())
         SetDeathState(DEAD);
 
     AddObjectToRemoveList();
@@ -162,7 +164,7 @@ void Totem::SetTypeBySummonSpell(SpellEntry const* spellProto)
     if (totemSpell)
     {
         // If spell have cast time -> so its active totem
-        if (GetSpellCastTime(totemSpell))
+        if (GetSpellCastTime(totemSpell, this))
             m_type = TOTEM_ACTIVE;
     }
     if (spellProto->SpellIconID == 2056)

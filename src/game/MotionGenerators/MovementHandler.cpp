@@ -214,6 +214,7 @@ void WorldSession::HandleMoveTeleportAckOpcode(WorldPacket& recv_data)
 
     WorldLocation const& dest = plMover->GetTeleportDest();
 
+    plMover->SetDelayedZoneUpdate(false, 0);
     plMover->SetPosition(dest.coord_x, dest.coord_y, dest.coord_z, dest.orientation, true);
 
     uint32 newzone, newarea;
@@ -379,7 +380,8 @@ void WorldSession::HandleMoveNotActiveMoverOpcode(WorldPacket& recv_data)
         return;
     }
 
-    _player->m_movementInfo = mi;
+    if (!_player->IsTaxiFlying())
+        _player->m_movementInfo = mi;
 }
 
 void WorldSession::HandleMountSpecialAnimOpcode(WorldPacket& /*recvdata*/)
@@ -469,13 +471,38 @@ void WorldSession::HandleMoveWaterWalkAck(WorldPacket& recv_data)
 
 void WorldSession::HandleSummonResponseOpcode(WorldPacket& recv_data)
 {
-    if (!_player->isAlive() || _player->isInCombat())
+    if (!_player->IsAlive() || _player->IsInCombat())
         return;
 
     ObjectGuid summonerGuid;
     recv_data >> summonerGuid;
 
     _player->SummonIfPossible(true);
+}
+
+void WorldSession::HandleMoveTimeSkippedOpcode(WorldPacket& recv_data)
+{
+    /*  WorldSession::Update( WorldTimer::getMSTime() );*/
+    DEBUG_LOG("WORLD: Received opcode CMSG_MOVE_TIME_SKIPPED");
+
+    ObjectGuid guid;
+    uint32 timeSkipped;
+    recv_data >> guid;
+    recv_data >> timeSkipped;
+
+    Unit* mover = _player->GetMover();
+
+    // Ignore updates not for current player
+    if (mover == nullptr || guid != mover->GetObjectGuid())
+        return;
+
+    mover->m_movementInfo.UpdateTime(mover->m_movementInfo.GetTime() + timeSkipped);
+
+    // Send to other players
+    WorldPacket data(MSG_MOVE_TIME_SKIPPED, 16);
+    data << mover->GetPackGUID();
+    data << timeSkipped;
+    mover->SendMessageToSetExcept(data, _player);
 }
 
 bool WorldSession::VerifyMovementInfo(MovementInfo const& movementInfo, ObjectGuid const& guid) const
@@ -557,12 +584,11 @@ void WorldSession::HandleMoverRelocation(MovementInfo& movementInfo)
                 // NOTE: this is actually called many times while falling
                 // even after the player has been teleported away
                 // TODO: discard movement packets after the player is rooted
-				/*
-                if (plMover->isAlive())
+                if (plMover->IsAlive())
                 {
                     plMover->EnvironmentalDamage(DAMAGE_FALL_TO_VOID, plMover->GetMaxHealth());
                     // pl can be alive if GM/etc
-                    if (!plMover->isAlive())
+                    if (!plMover->IsAlive())
                     {
                         // change the death state to CORPSE to prevent the death timer from
                         // starting in the next player update

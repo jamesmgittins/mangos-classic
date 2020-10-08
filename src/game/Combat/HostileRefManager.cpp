@@ -46,7 +46,7 @@ void HostileRefManager::threatAssist(Unit* victim, float threat, SpellEntry cons
     while (ref)
     {
         Unit* owner = ref->getSource()->getOwner();
-        if (!owner->IsIncapacitated() && owner != victim)
+        if (!owner->IsCrowdControlled() && owner != victim && owner->CanAttack(victim))
             validRefs.push_back(ref);
         ref = ref->next();
     }
@@ -54,7 +54,10 @@ void HostileRefManager::threatAssist(Unit* victim, float threat, SpellEntry cons
     uint32 size = singleTarget ? 1 : validRefs.size();            // if singleTarget do not devide threat
     float threatPerTarget = threat / size;
     for (HostileReference* validReference : validRefs)
+    {
         validReference->getSource()->addThreat(victim, threatPerTarget, false, (threatSpell ? GetSpellSchoolMask(threatSpell) : SPELL_SCHOOL_MASK_NORMAL), threatSpell);
+        victim->GetCombatManager().TriggerCombatTimer(validReference->getSource()->getOwner());
+    }
 }
 
 //=================================================
@@ -69,7 +72,7 @@ void HostileRefManager::addThreatPercent(int32 threatPercent)
     }
 }
 
-void HostileRefManager::threatTemporaryFade(Unit* victim, float threat, bool apply)
+void HostileRefManager::threatTemporaryFade(Unit* /*victim*/, float threat, bool apply)
 {
     HostileReference* ref = getFirst();
 
@@ -106,7 +109,7 @@ void HostileRefManager::updateOnlineOfflineState(bool pIsOnline)
     if (pIsOnline && iOwner)
     {
         // Do not set online while feigning death in combat
-        if (iOwner->IsFeigningDeathSuccessfully() && iOwner->isInCombat())
+        if (iOwner->IsFeigningDeathSuccessfully() && iOwner->IsInCombat())
             return;
     }
     setOnlineOfflineState(pIsOnline);
@@ -212,7 +215,7 @@ void HostileRefManager::HandleSuppressed(bool apply, bool immunity)
             {
                 Unit* source = ref.getSource()->getOwner();
                 Unit* target = ref.getTarget();
-                if (!target->IsImmuneToDamage(source->GetMeleeDamageSchoolMask()))
+                if (!target->IsImmuneToDamage(source->GetMainAttackSchoolMask()))
                     continue;
             }
             ref.SetHostileState(STATE_SUPPRESSED);

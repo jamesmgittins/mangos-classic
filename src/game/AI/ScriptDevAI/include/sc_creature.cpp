@@ -2,7 +2,7 @@
  * This program is free software licensed under GPL version 2
  * Please see the included DOCS/LICENSE.TXT for more information */
 
-#include "AI/ScriptDevAI/include/precompiled.h"
+#include "AI/ScriptDevAI/include/sc_common.h"
 #include "Entities/Item.h"
 #include "Spells/Spell.h"
 #include "WorldPacket.h"
@@ -47,7 +47,7 @@ void ScriptedAI::EnterCombat(Unit* enemy)
 void ScriptedAI::UpdateAI(const uint32 /*diff*/)
 {
     // Check if we have a current target
-    if (!m_creature->SelectHostileTarget() || !m_creature->getVictim())
+    if (!m_creature->SelectHostileTarget() || !m_creature->GetVictim())
         return;
 
     DoMeleeAttackIfReady();
@@ -93,7 +93,7 @@ void ScriptedAI::DoStartNoMovement(Unit* victim)
 
 void ScriptedAI::DoStopAttack()
 {
-    if (m_creature->getVictim())
+    if (m_creature->GetVictim())
         m_creature->AttackStop();
 }
 
@@ -304,24 +304,6 @@ void FillSpellSummary()
     }
 }
 
-void ScriptedAI::DoResetThreat()
-{
-    if (!m_creature->CanHaveThreatList() || m_creature->getThreatManager().isThreatListEmpty())
-    {
-        script_error_log("DoResetThreat called for creature that either cannot have threat list or has empty threat list (m_creature entry = %d)", m_creature->GetEntry());
-        return;
-    }
-
-    ThreatList const& tList = m_creature->getThreatManager().getThreatList();
-    for (auto itr : tList)
-    {
-        Unit* unit = m_creature->GetMap()->GetUnit(itr->getUnitGuid());
-
-        if (unit && m_creature->getThreatManager().getThreat(unit))
-            m_creature->getThreatManager().modifyThreatPercent(unit, -100);
-    }
-}
-
 void ScriptedAI::DoTeleportPlayer(Unit* unit, float x, float y, float z, float ori)
 {
     if (!unit)
@@ -381,13 +363,24 @@ void ScriptedAI::SetEquipmentSlots(bool loadDefault, int32 mainHand, int32 offHa
     }
 
     if (mainHand >= 0)
+    { 
         m_creature->SetVirtualItem(VIRTUAL_ITEM_SLOT_0, mainHand);
+        m_creature->UpdateDamagePhysical(BASE_ATTACK);            
+    }
 
     if (offHand >= 0)
+    { 
         m_creature->SetVirtualItem(VIRTUAL_ITEM_SLOT_1, offHand);
-
+        if(offHand == 1)
+            m_creature->SetCanDualWield(true);
+        else
+            m_creature->SetCanDualWield(false);
+    }
     if (ranged >= 0)
+    {
         m_creature->SetVirtualItem(VIRTUAL_ITEM_SLOT_2, ranged);
+        m_creature->UpdateDamagePhysical(RANGED_ATTACK);
+    }
 }
 
 // Hacklike storage used for misc creatures that are expected to evade of outside of a certain area.
@@ -407,7 +400,7 @@ bool ScriptedAI::EnterEvadeIfOutOfCombatArea(const uint32 diff)
         return false;
     }
 
-    if (m_creature->IsInEvadeMode() || !m_creature->getVictim())
+    if (m_creature->GetCombatManager().IsInEvadeMode() || !m_creature->GetVictim())
         return false;
 
     float x = m_creature->GetPositionX();
@@ -420,7 +413,6 @@ bool ScriptedAI::EnterEvadeIfOutOfCombatArea(const uint32 diff)
             if (z > 448.60f)
                 return false;
             break;
-
         default:
             script_error_log("EnterEvadeIfOutOfCombatArea used for creature entry %u, but does not have any definition.", m_creature->GetEntry());
             return false;
@@ -433,7 +425,7 @@ bool ScriptedAI::EnterEvadeIfOutOfCombatArea(const uint32 diff)
 void ScriptedAI::DespawnGuids(GuidVector& spawns)
 {
     for (ObjectGuid& guid : spawns)
-        if (Creature* spawn = m_creature->GetMap()->GetCreature(guid))
+        if (Creature* spawn = m_creature->GetMap()->GetAnyTypeCreature(guid))
             spawn->ForcedDespawn();
     spawns.clear();
 }
@@ -441,16 +433,4 @@ void ScriptedAI::DespawnGuids(GuidVector& spawns)
 void Scripted_NoMovementAI::GetAIInformation(ChatHandler& reader)
 {
     reader.PSendSysMessage("Subclass of Scripted_NoMovementAI");
-}
-
-void Scripted_NoMovementAI::AttackStart(Unit* who)
-{
-    if (who && m_creature->Attack(who, m_meleeEnabled))
-    {
-        m_creature->AddThreat(who);
-        m_creature->SetInCombatWith(who);
-        who->SetInCombatWith(m_creature);
-
-        DoStartNoMovement(who);
-    }
 }

@@ -23,7 +23,7 @@ EndScriptData
 
 */
 
-#include "AI/ScriptDevAI/include/precompiled.h"/* ContentData
+#include "AI/ScriptDevAI/include/sc_common.h"/* ContentData
 npc_aged_dying_ancient_kodo
 npc_dalinda_malem
 npc_melizza_brimbuzzle
@@ -103,7 +103,7 @@ struct npc_aged_dying_ancient_kodoAI : public ScriptedAI
         // timer should always be == 0 unless we already updated entry of creature. Then not expect this updated to ever be in combat.
         if (m_uiDespawnTimer && m_uiDespawnTimer <= diff)
         {
-            if (!m_creature->getVictim() && m_creature->isAlive())
+            if (!m_creature->GetVictim() && m_creature->IsAlive())
             {
                 Reset();
                 m_creature->SetDeathState(JUST_DIED);
@@ -113,7 +113,7 @@ struct npc_aged_dying_ancient_kodoAI : public ScriptedAI
         }
         else m_uiDespawnTimer -= diff;
 
-        if (!m_creature->SelectHostileTarget() || !m_creature->getVictim())
+        if (!m_creature->SelectHostileTarget() || !m_creature->GetVictim())
             return;
 
         DoMeleeAttackIfReady();
@@ -371,7 +371,7 @@ struct npc_melizza_brimbuzzleAI : public npc_escortAI, private DialogueHelper
     {
         DialogueUpdate(uiDiff);
 
-        if (!m_creature->SelectHostileTarget() || !m_creature->getVictim())
+        if (!m_creature->SelectHostileTarget() || !m_creature->GetVictim())
             return;
 
         DoMeleeAttackIfReady();
@@ -470,7 +470,7 @@ struct npc_cork_gizeltonAI : public ScriptedAI
         uiQuestStatus = 0;
     }
 
-    void ReceiveAIEvent(AIEventType eventType, Unit* /*pSender*/, Unit* pInvoker, uint32 uiMiscValue) override
+    void ReceiveAIEvent(AIEventType eventType, Unit* /*pSender*/, Unit* pInvoker, uint32 /*uiMiscValue*/) override
     {
         if (eventType == AI_EVENT_START_ESCORT && pInvoker->GetTypeId() == TYPEID_PLAYER)
             m_playerGuid = pInvoker->GetObjectGuid();
@@ -685,6 +685,7 @@ enum
     SPELL_GHOST_SPAWN_IN   = 17321,
     SPELL_BLUE_AURA        = 17327,
     SPELL_GREEN_AURA       = 18951,
+    SPELL_CHILLING_TOUCH   = 18146,
 
     FACTION_HOSTILE        = 16,
 
@@ -705,8 +706,9 @@ struct npc_magrami_spectre : public ScriptedAI
 
     void JustRespawned() override
     {
-        m_creature->CastSpell(m_creature, SPELL_GHOST_SPAWN_IN, TRIGGERED_NONE);
-        m_creature->CastSpell(m_creature, SPELL_BLUE_AURA, TRIGGERED_NONE);
+        m_creature->CastSpell(nullptr, SPELL_GHOST_SPAWN_IN, TRIGGERED_NONE);
+        m_creature->CastSpell(nullptr, SPELL_BLUE_AURA, TRIGGERED_NONE);
+        m_creature->CastSpell(nullptr, SPELL_CHILLING_TOUCH, TRIGGERED_NONE);
 
         switch (urand(0, 1))
         {
@@ -737,7 +739,7 @@ struct npc_magrami_spectre : public ScriptedAI
 
     void UpdateAI(const uint32 uiDiff) override
     {
-        if (!m_creature->SelectHostileTarget() || !m_creature->getVictim())
+        if (!m_creature->SelectHostileTarget() || !m_creature->GetVictim())
             return;
 
         if (m_uiCurseTimer)
@@ -745,7 +747,7 @@ struct npc_magrami_spectre : public ScriptedAI
             if (m_uiCurseTimer <= uiDiff)
             {
                 m_uiCurseTimer = 0;
-                DoCastSpellIfCan(m_creature->getVictim(), SPELL_CURSE_OF_MAGRAMI);
+                DoCastSpellIfCan(m_creature->GetVictim(), SPELL_CURSE_OF_MAGRAMI);
             }
             else
                 m_uiCurseTimer -= uiDiff;

@@ -138,10 +138,7 @@ CombatManeuverReturns PlayerbotWarriorAI::DoFirstCombatManeuver(Unit* pTarget)
         case PlayerbotAI::SCENARIO_PVE_RAID:
         default:
             return DoFirstCombatManeuverPVE(pTarget);
-            break;
     }
-
-    return RETURN_NO_ACTION_ERROR;
 }
 
 CombatManeuverReturns PlayerbotWarriorAI::DoFirstCombatManeuverPVE(Unit* pTarget)
@@ -283,10 +280,7 @@ CombatManeuverReturns PlayerbotWarriorAI::DoNextCombatManeuver(Unit* pTarget)
         case PlayerbotAI::SCENARIO_PVE_RAID:
         default:
             return DoNextCombatManeuverPVE(pTarget);
-            break;
     }
-
-    return RETURN_NO_ACTION_ERROR;
 }
 
 CombatManeuverReturns PlayerbotWarriorAI::DoNextCombatManeuverPVE(Unit* pTarget)
@@ -298,15 +292,13 @@ CombatManeuverReturns PlayerbotWarriorAI::DoNextCombatManeuverPVE(Unit* pTarget)
 
     //Used to determine if this bot is highest on threat
     Unit* newTarget = m_ai->FindAttacker((PlayerbotAI::ATTACKERINFOTYPE)(PlayerbotAI::AIT_VICTIMSELF | PlayerbotAI::AIT_HIGHESTTHREAT), m_bot);
-    Unit* pVictim = pTarget->getVictim();
+    Unit* pVictim = pTarget->GetVictim();
 
     // do shouts, berserker rage, etc...
     if (BERSERKER_RAGE > 0 && !m_bot->HasAura(BERSERKER_RAGE, EFFECT_INDEX_0))
         m_ai->CastSpell(BERSERKER_RAGE);
     else if (BLOODRAGE > 0 && m_ai->GetRageAmount() <= 10)
         m_ai->CastSpell(BLOODRAGE);
-
-    Creature* pCreature = (Creature*) pTarget;
 
     // Prevent low health humanoid from fleeing with Hamstring
     if ((m_bot->HasAura(BATTLE_STANCE, EFFECT_INDEX_0) || m_bot->HasAura(BERSERKER_STANCE, EFFECT_INDEX_0)) && pTarget->GetHealthPercent() < 20 && !m_ai->IsElite(pTarget, true))
@@ -561,18 +553,7 @@ bool PlayerbotWarriorAI::CanPull()
     if (!m_bot) return false;
     if (!m_ai) return false;
 
-    if (m_bot->GetUInt32Value(PLAYER_AMMO_ID)) // Having ammo equipped means a weapon is equipped as well. Probably. [TODO: does this work with throwing knives? Can a playerbot 'cheat' ammo into the slot without a proper weapon?]
-    {
-        // Can't do this, CanPull CANNOT check for anything that requires a target
-        //if (!m_ai->IsInRange(m_ai->GetCurrentTarget(), AUTO_SHOT))
-        //{
-        //    m_ai->TellMaster("I'm out of range.");
-        //    return false;
-        //}
-        return true;
-    }
-
-    return false;
+    return m_bot->GetUInt32Value(PLAYER_AMMO_ID) != 0;
 }
 
 // Match up with "CanPull()" above
@@ -611,18 +592,21 @@ bool PlayerbotWarriorAI::Pull()
         }
     }
     else
+    {
+        m_ai->TellMaster("Can't pull: equiped range item is unkown.");
         return false;
+    }
 
     if (m_bot->GetDistance(m_ai->GetCurrentTarget(), true, DIST_CALC_COMBAT_REACH_WITH_MELEE) > ATTACK_DISTANCE)
     {
         if (!m_ai->In_Reach(m_ai->GetCurrentTarget(), SHOOT))
         {
-            m_ai->TellMaster("I'm out of range.");
+            m_ai->TellMaster("Can't pull: I'm out of range.");
             return false;
         }
         if (!m_bot->IsWithinLOSInMap(m_ai->GetCurrentTarget()))
         {
-            m_ai->TellMaster("Target is out of sight.");
+            m_ai->TellMaster("Can't pull: target is out of sight.");
             return false;
         }
 
@@ -638,5 +622,6 @@ bool PlayerbotWarriorAI::Pull()
         return true;
     }
 
-    return false;
+    m_ai->TellMaster("I cannot pull my target for an unkown reason.");
+        return false;
 }

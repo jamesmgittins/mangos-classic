@@ -76,8 +76,8 @@ void WorldSession::HandleGroupInviteOpcode(WorldPacket& recv_data)
 
     Player* recipient = sObjectMgr.GetPlayer(membername.c_str());
 
-    // no player
-    if (!recipient)
+    // no player or player trying to invite himself
+    if (!recipient || recipient == initiator)
     {
         SendPartyResult(PARTY_OP_INVITE, membername, ERR_BAD_PLAYER_NAME_S);
         return;
@@ -166,6 +166,7 @@ void WorldSession::HandleGroupInviteOpcode(WorldPacket& recv_data)
         }
         if (!initiatorGroup->AddInvite(recipient))
         {
+            initiatorGroup->RemoveAllInvites();
             delete initiatorGroup;
             return;
         }

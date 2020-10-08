@@ -23,7 +23,7 @@ EndScriptData
 
 */
 
-#include "AI/ScriptDevAI/include/precompiled.h"/* ContentData
+#include "AI/ScriptDevAI/include/sc_common.h"/* ContentData
 npc_daphne_stilwell
 npc_defias_traitor
 EndContentData */
@@ -96,14 +96,14 @@ struct npc_daphne_stilwellAI : public npc_escortAI
     {
         if (HasEscortState(STATE_ESCORT_ESCORTING))
         {
-            if (m_uiWPHolder >= 5)
+            if (m_uiWPHolder >= 6)
                 m_creature->SetSheath(SHEATH_STATE_RANGED);
 
             switch (m_uiWPHolder)
             {
-                case 7: DoScriptText(SAY_DS_DOWN_1, m_creature); break;
-                case 8: DoScriptText(SAY_DS_DOWN_2, m_creature); break;
-                case 9:
+                case 8: DoScriptText(SAY_DS_DOWN_1, m_creature); break;
+                case 9: DoScriptText(SAY_DS_DOWN_2, m_creature); break;
+                case 10:
                     if (m_lSummonedRaidersGUIDs.empty())
                         DoScriptText(SAY_DS_DOWN_3, m_creature);
                     break;
@@ -121,43 +121,43 @@ struct npc_daphne_stilwellAI : public npc_escortAI
 
         switch (uiPointId)
         {
-            case 4:
+            case 5:
                 m_creature->HandleEmote(EMOTE_STATE_USESTANDING_NOSHEATHE);
                 break;
-            case 5:
+            case 6:
                 SetEquipmentSlots(false, EQUIP_NO_CHANGE, EQUIP_NO_CHANGE, EQUIP_ID_RIFLE);
                 m_creature->SetSheath(SHEATH_STATE_RANGED);
                 m_creature->HandleEmote(EMOTE_STATE_STAND);
                 break;
-            case 7:
+            case 8:
                 DoSendWave(Wave::FIRST);
                 break;
-            case 8:
+            case 9:
                 DoSendWave(Wave::SECOND);
                 break;
-            case 9:
+            case 10:
                 DoSendWave(Wave::THIRD);
                 SetEscortPaused(true);
                 break;
-            case 10:
+            case 11:
                 SetRun(false);
                 break;
-            case 11:
+            case 12:
                 DoScriptText(SAY_DS_PROLOGUE, m_creature);
                 break;
-            case 13:
+            case 14:
                 SetEquipmentSlots(true);
                 m_creature->SetSheath(SHEATH_STATE_UNARMED);
                 m_creature->HandleEmote(EMOTE_STATE_USESTANDING);
                 break;
-            case 14:
+            case 15:
                 m_creature->HandleEmote(EMOTE_STATE_STAND);
                 break;
-            case 17:
+            case 18:
                 if (Player* pPlayer = GetPlayerForEscort())
                     pPlayer->RewardPlayerAndGroupAtEventExplored(QUEST_TOME_VALOR, m_creature);
                 break;
-            case 18:
+            case 19:
                 DoEndEscort();
                 break;
         }
@@ -224,7 +224,7 @@ struct npc_daphne_stilwellAI : public npc_escortAI
 
     void JustReachedHome() override
     {
-        if (HasEscortState(STATE_ESCORT_ESCORTING) && m_uiWPHolder >= 5)
+        if (HasEscortState(STATE_ESCORT_ESCORTING) && m_uiWPHolder >= 6)
             m_creature->SetSheath(SHEATH_STATE_RANGED);
     }
 
@@ -240,13 +240,13 @@ struct npc_daphne_stilwellAI : public npc_escortAI
     {
         m_lSummonedRaidersGUIDs.remove(pSummoned->GetObjectGuid());
 
-        if (m_uiWPHolder >= 9 && m_lSummonedRaidersGUIDs.empty())
+        if (m_uiWPHolder >= 10 && m_lSummonedRaidersGUIDs.empty())
             SetEscortPaused(false);
     }
 
     void SummonedCreatureDespawn(Creature* pSummoned) override // just in case this happens somehow
     {
-        if (pSummoned->isAlive())
+        if (pSummoned->IsAlive())
             m_lSummonedRaidersGUIDs.remove(pSummoned->GetObjectGuid());
     }
 
@@ -265,17 +265,17 @@ struct npc_daphne_stilwellAI : public npc_escortAI
 
     void UpdateEscortAI(const uint32 uiDiff) override
     {
-        if (!m_creature->SelectHostileTarget() || !m_creature->getVictim())
+        if (!m_creature->SelectHostileTarget() || !m_creature->GetVictim())
             return;
 
         if (m_uiShootTimer < uiDiff)
         {
             m_uiShootTimer = DAPHNE_SHOOT_CD;
 
-            if (DoCastSpellIfCan(m_creature->getVictim(), SPELL_SHOOT) != CanCastResult::CAST_OK && !IsCombatMovement())
+            if (DoCastSpellIfCan(m_creature->GetVictim(), SPELL_SHOOT) != CanCastResult::CAST_OK && !IsCombatMovement())
             {
                 SetCombatMovement(true);
-                DoStartMovement(m_creature->getVictim());
+                DoStartMovement(m_creature->GetVictim());
             }
         }
         else
@@ -320,20 +320,24 @@ enum
 
 struct npc_defias_traitorAI : public npc_escortAI
 {
-    npc_defias_traitorAI(Creature* pCreature) : npc_escortAI(pCreature) { Reset(); }
-
-    void WaypointReached(uint32 uiPointId) override
+    npc_defias_traitorAI(Creature* creature) : npc_escortAI(creature)
     {
-        switch (uiPointId)
+        SetReactState(REACT_DEFENSIVE);
+        Reset();
+    }
+
+    void WaypointReached(uint32 pointId) override
+    {
+        switch (pointId)
         {
-            case 35:
+            case 36:
                 SetRun(false);
                 break;
-            case 36:
+            case 37:
                 if (Player* pPlayer = GetPlayerForEscort())
                     DoScriptText(SAY_PROGRESS, m_creature, pPlayer);
                 break;
-            case 44:
+            case 45:
                 if (Player* pPlayer = GetPlayerForEscort())
                 {
                     DoScriptText(SAY_END, m_creature, pPlayer);
@@ -343,30 +347,30 @@ struct npc_defias_traitorAI : public npc_escortAI
         }
     }
 
-    void Aggro(Unit* pWho) override
+    void Aggro(Unit* who) override
     {
-        DoScriptText(urand(0, 1) ? SAY_AGGRO_1 : SAY_AGGRO_2, m_creature, pWho);
+        DoScriptText(urand(0, 1) ? SAY_AGGRO_1 : SAY_AGGRO_2, m_creature, who);
     }
 
     void Reset() override { }
 };
 
-bool QuestAccept_npc_defias_traitor(Player* pPlayer, Creature* pCreature, const Quest* pQuest)
+bool QuestAccept_npc_defias_traitor(Player* player, Creature* creature, const Quest* quest)
 {
-    if (pQuest->GetQuestId() == QUEST_DEFIAS_BROTHERHOOD)
+    if (quest->GetQuestId() == QUEST_DEFIAS_BROTHERHOOD)
     {
-        DoScriptText(SAY_START, pCreature, pPlayer);
+        DoScriptText(SAY_START, creature, player);
 
-        if (npc_defias_traitorAI* pEscortAI = dynamic_cast<npc_defias_traitorAI*>(pCreature->AI()))
-            pEscortAI->Start(true, pPlayer, pQuest);
+        if (npc_defias_traitorAI* escortAI = dynamic_cast<npc_defias_traitorAI*>(creature->AI()))
+            escortAI->Start(true, player, quest);
     }
 
     return true;
 }
 
-UnitAI* GetAI_npc_defias_traitor(Creature* pCreature)
+UnitAI* GetAI_npc_defias_traitor(Creature* creature)
 {
-    return new npc_defias_traitorAI(pCreature);
+    return new npc_defias_traitorAI(creature);
 }
 
 void AddSC_westfall()

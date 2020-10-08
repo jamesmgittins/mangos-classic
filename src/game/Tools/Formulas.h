@@ -323,8 +323,8 @@ namespace MaNGOS
                     nLevelDiff = 4;
                 return nBaseExp * (1.0f + (0.05f * nLevelDiff));
             }
-            uint32 gray_level = GetGrayLevel(unit_level);
-            if (mob_level > gray_level)
+
+            if (!IsTrivialLevelDifference(unit_level, mob_level))
             {
                 uint32 ZD = GetZeroDifference(unit_level);
                 uint32 nLevelDiff = unit_level - mob_level;
@@ -365,7 +365,7 @@ namespace MaNGOS
             return (uint32)(std::nearbyint(xp_gain * sWorld.getConfig(CONFIG_FLOAT_RATE_XP_KILL)));
         }
 
-        inline float xp_in_group_rate(uint32 count, bool isRaid)
+        inline float xp_in_group_rate(uint32 count, bool /*isRaid*/)
         {
             // TODO: this formula is completely guesswork only based on a logical assumption
             switch (count)

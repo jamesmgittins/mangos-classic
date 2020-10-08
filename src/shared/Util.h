@@ -23,6 +23,7 @@
 
 #include <string>
 #include <vector>
+#include <random>
 
 typedef std::vector<std::string> Tokens;
 
@@ -45,6 +46,7 @@ inline uint32 secsToTimeBitFields(time_t secs)
 inline float levelScaleMod(float min, float max, uint32 level) {
 	return max - ((max - min) * ((level - 10) / 50));
 }
+std::mt19937* GetRandomGenerator();
 
 /* Return a random number in the range min..max; (max-min) must be smaller than 32768. */
 int32 irand(int32 min, int32 max);
@@ -163,7 +165,8 @@ bool Utf8toWStr(const std::string& utf8str, std::wstring& wstr, size_t max_len =
 
 bool WStrToUtf8(const std::wstring& wstr, std::string& utf8str);
 
-size_t utf8length(std::string& utf8str);                    // set string to "" if invalid utf8 sequence
+size_t utf8length(std::string& utf8str);                    // returns string's length in utf8 chars, sets string to "" on invalid utf8 sequence
+size_t utf8limit(std::string& utf8str, size_t bytes);       // returns string's new size in bytes, sets string to "" on invalid utf8 sequence
 void utf8truncate(std::string& utf8str, size_t len);
 
 inline bool isBasicLatinCharacter(wchar_t wchar)
@@ -386,4 +389,12 @@ bool IsIPAddress(char const* ipaddress);
 uint32 CreatePIDFile(const std::string& filename);
 
 void hexEncodeByteArray(uint8* bytes, uint32 arrayLen, std::string& result);
+
+template<typename E>
+constexpr typename std::underlying_type<E>::type AsUnderlyingType(E enumValue)
+{
+    static_assert(std::is_enum<E>::value, "AsUnderlyingType can only be used with enums");
+    return static_cast<typename std::underlying_type<E>::type>(enumValue);
+}
+
 #endif

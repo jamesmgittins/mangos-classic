@@ -26,6 +26,7 @@ extern void AddSC_npc_professions();
 extern void AddSC_npcs_special();
 extern void AddSC_spell_scripts();
 extern void AddSC_world_map_scripts();
+extern void AddSC_war_effort();
 
 // eastern kingdoms
 extern void AddSC_blackrock_depths();                       // blackrock_depths
@@ -139,6 +140,7 @@ extern void AddSC_undercity();
 extern void AddSC_western_plaguelands();
 extern void AddSC_westfall();
 extern void AddSC_wetlands();
+extern void AddSC_world_eastern_kingdoms();
 
 // kalimdor
 extern void AddSC_instance_blackfathom_deeps();             // blackfathom_deeps
@@ -197,6 +199,7 @@ extern void AddSC_thousand_needles();
 extern void AddSC_thunder_bluff();
 extern void AddSC_ungoro_crater();
 extern void AddSC_winterspring();
+extern void AddSC_world_kalimdor();
 
 // northrend
 // removed
@@ -228,6 +231,7 @@ void AddScripts()
     AddSC_npcs_special();
     AddSC_spell_scripts();
     AddSC_world_map_scripts();
+    AddSC_war_effort();
 
     // eastern kingdoms
     AddSC_blackrock_depths();                               // blackrock_depths
@@ -341,6 +345,7 @@ void AddScripts()
     AddSC_western_plaguelands();
     AddSC_westfall();
     AddSC_wetlands();
+    AddSC_world_eastern_kingdoms();
 
     // kalimdor
     AddSC_instance_blackfathom_deeps();                     // blackfathom deeps
@@ -399,6 +404,7 @@ void AddScripts()
     AddSC_thunder_bluff();
     AddSC_ungoro_crater();
     AddSC_winterspring();
+    AddSC_world_kalimdor();
 
     // northrend
     // removed

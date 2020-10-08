@@ -163,7 +163,7 @@ Defining a buddy could be done in several way:
 -- --------------------------
 
  0 SCRIPT_COMMAND_TALK                      resultingSource = WorldObject, resultingTarget = Unit/none
-                                            * datalong = dbscript_string_template ID - will randomize between all db_script_strings in given template, ids from template are checked against dbscript_string table
+                                            * datalong = dbscript_string_template ID - will randomize between all dbscript_strings in given template, ids from template are checked against dbscript_string table
                                             * dataint = text entry from dbscript_string -table. dataint2-dataint4 optionally, for random selection of text
 
  1 SCRIPT_COMMAND_EMOTE                     resultingSource = Unit, resultingTarget = Unit/none
@@ -250,6 +250,7 @@ Defining a buddy could be done in several way:
 20 SCRIPT_COMMAND_MOVEMENT                  resultingSource = Creature
                                             * datalong = MovementType (0:idle, 1:random or 2:waypoint)
                                             * datalong2 = wanderDistance (for random movement), pathId (for waypoint movement)
+                                            * datalong3 = timer for timed random movement
                                             * data_flags & SCRIPT_FLAG_COMMAND_ADDITIONAL: RandomMovement around current position
 
 21 SCRIPT_COMMAND_SET_ACTIVEOBJECT          resultingSource = Creature
@@ -327,6 +328,7 @@ Defining a buddy could be done in several way:
                                             * datalong = 0:  Move resultingSource towards resultingTarget
                                             * datalong != 0: Move resultingSource to a random point between datalong2..datalong around resultingTarget.
                                               orientation != 0: Obtain a random point around resultingTarget in direction of orientation
+                                            * datalong3 = Exact contact point distance, to be used when you want to stop moving as soon as you're within this distance of the target
                                             * data_flags & SCRIPT_FLAG_COMMAND_ADDITIONAL Obtain a point in direction of resTarget->GetOrientation + orientation
                                               for resTarget == resSource and orientation == 0 this will mean resSource moving forward
 

@@ -372,12 +372,12 @@ void Player::CalculateMinMaxDamage(WeaponAttackType attType, bool normalized, fl
             weapon_mindamage += GetAmmoDPS() * att_speed;
             weapon_maxdamage += GetAmmoDPS() * att_speed;
         }
-    }
 
-    if (index != 0)
-    {
-        base_value = 0.0f;
-        total_value = 0.0f;
+        if (index != 0)
+        {
+            base_value = 0.0f;
+            total_value = 0.0f;
+        }
     }
 
     min_damage = ((base_value + weapon_mindamage) * base_pct + total_value) * total_pct;
@@ -632,7 +632,13 @@ void Creature::UpdateArmor()
 
 void Creature::UpdateMaxHealth()
 {
-    float value = GetTotalAuraModValue(UNIT_MOD_HEALTH);
+    UnitMods unitMod = UNIT_MOD_HEALTH;
+
+    float value = GetModifierValue(unitMod, BASE_VALUE) + GetCreateHealth();
+    value *= GetModifierValue(unitMod, BASE_PCT);
+    value += GetModifierValue(unitMod, TOTAL_VALUE);
+    value *= GetModifierValue(unitMod, TOTAL_PCT);
+
     SetMaxHealth((uint32)value);
 }
 
@@ -640,7 +646,11 @@ void Creature::UpdateMaxPower(Powers power)
 {
     UnitMods unitMod = UnitMods(UNIT_MOD_POWER_START + power);
 
-    float value  = GetTotalAuraModValue(unitMod);
+    float value = GetModifierValue(unitMod, BASE_VALUE) + GetCreatePowers(power);
+    value *= GetModifierValue(unitMod, BASE_PCT);
+    value += GetModifierValue(unitMod, TOTAL_VALUE);
+    value *= GetModifierValue(unitMod, TOTAL_PCT);
+
     SetMaxPower(power, uint32(value));
 }
 
@@ -857,24 +867,25 @@ void Pet::UpdateAttackPowerAndDamage(bool ranged)
 
     // automatically update weapon damage after attack power modification
     UpdateDamagePhysical(BASE_ATTACK);
+    UpdateDamagePhysical(OFF_ATTACK);
 }
 
 void Pet::UpdateDamagePhysical(WeaponAttackType attType)
 {
-    if (attType > BASE_ATTACK)
+    if (attType > OFF_ATTACK)
         return;
 
     UnitMods unitMod = UNIT_MOD_DAMAGE_MAINHAND;
 
-    float att_speed = float(GetAttackTime(BASE_ATTACK)) / 1000.0f;
+    float att_speed = float(GetAttackTime(attType)) / 1000.0f;
 
     float base_value  = GetModifierValue(unitMod, BASE_VALUE) + GetTotalAttackPowerValue(attType) / 14.0f * att_speed;
     float base_pct    = GetModifierValue(unitMod, BASE_PCT);
     float total_value = GetModifierValue(unitMod, TOTAL_VALUE);
     float total_pct   = GetModifierValue(unitMod, TOTAL_PCT);
 
-    float weapon_mindamage = GetBaseWeaponDamage(BASE_ATTACK, MINDAMAGE);
-    float weapon_maxdamage = GetBaseWeaponDamage(BASE_ATTACK, MAXDAMAGE);
+    float weapon_mindamage = GetBaseWeaponDamage(attType, MINDAMAGE);
+    float weapon_maxdamage = GetBaseWeaponDamage(attType, MAXDAMAGE);
 
     float mindamage = ((base_value + weapon_mindamage) * base_pct + total_value) * total_pct;
     float maxdamage = ((base_value + weapon_maxdamage) * base_pct + total_value) * total_pct;
@@ -900,6 +911,33 @@ void Pet::UpdateDamagePhysical(WeaponAttackType attType)
         }
     }
 
-    SetStatFloatValue(UNIT_FIELD_MINDAMAGE, mindamage);
-    SetStatFloatValue(UNIT_FIELD_MAXDAMAGE, maxdamage);
+    // Disarm for creatures
+    if (hasWeapon(attType) && !hasWeaponForAttack(attType))
+    {
+        mindamage *= 0.5f;
+        maxdamage *= 0.5f;
+    }
+
+    uint16 fieldmin, fieldmax;
+
+    switch (attType)
+    {
+        case RANGED_ATTACK:
+            fieldmin = UNIT_FIELD_MINRANGEDDAMAGE;
+            fieldmax = UNIT_FIELD_MAXRANGEDDAMAGE;
+            break;
+        case BASE_ATTACK:
+            fieldmin = UNIT_FIELD_MINDAMAGE;
+            fieldmax = UNIT_FIELD_MAXDAMAGE;
+            break;
+        case OFF_ATTACK:
+            fieldmin = UNIT_FIELD_MINOFFHANDDAMAGE;
+            fieldmax = UNIT_FIELD_MAXOFFHANDDAMAGE;
+            break;
+        default:
+            return;
+    }
+
+    SetStatFloatValue(fieldmin, mindamage);
+    SetStatFloatValue(fieldmax, maxdamage);
 }

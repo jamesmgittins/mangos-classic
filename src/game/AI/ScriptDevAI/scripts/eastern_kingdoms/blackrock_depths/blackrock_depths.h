@@ -139,7 +139,9 @@ enum
     YELL_SENATOR_1          = -1230060,
     YELL_SENATOR_2          = -1230061,
     YELL_SENATOR_3          = -1230062,
-    YELL_SENATOR_4          = -1230063
+    YELL_SENATOR_4          = -1230063,
+
+    YELL_MAGMUS_INTRO        = -1230070
 };
 
 // Random emotes for Grim Guzzler patrons
@@ -235,7 +237,7 @@ class instance_blackrock_depths : public ScriptedInstance
         const char* Save() const override { return m_strInstData.c_str(); }
         void Load(const char* chrIn) override;
 
-        void Update(uint32 uiDiff) override;
+        void Update(const uint32 diff) override;
 
         // Arena Event
         void SetArenaCenterCoords(float fX, float fY, float fZ) { m_fArenaCenterX = fX; m_fArenaCenterY = fY; m_fArenaCenterZ = fZ; }

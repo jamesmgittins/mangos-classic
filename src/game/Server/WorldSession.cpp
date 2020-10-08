@@ -36,6 +36,7 @@
 #include "Globals/ObjectAccessor.h"
 #include "BattleGround/BattleGroundMgr.h"
 #include "Social/SocialMgr.h"
+#include "GMTickets/GMTicketMgr.h"
 #include "Loot/LootMgr.h"
 
 #include <mutex>
@@ -92,7 +93,7 @@ bool WorldSessionFilter::Process(WorldPacket const& packet) const
 WorldSession::WorldSession(uint32 id, WorldSocket* sock, AccountTypes sec, time_t mute_time, LocaleConstant locale) :
     m_muteTime(mute_time),
     _player(nullptr), m_Socket(sock ? sock->shared<WorldSocket>() : nullptr), _security(sec), _accountId(id), _logoutTime(0),
-    m_inQueue(false), m_playerLoading(false), m_playerLogout(false), m_playerRecentlyLogout(false), m_playerSave(false),
+    m_inQueue(false), m_playerLoading(false), m_playerLogout(false), m_playerRecentlyLogout(false), m_playerSave(true),
     m_sessionDbcLocale(sWorld.GetAvailableDbcLocale(locale)), m_sessionDbLocaleIndex(sObjectMgr.GetIndexForLocale(locale)),
     m_latency(0), m_clientTimeDelay(0), m_tutorialState(TUTORIALDATA_UNCHANGED), m_sessionState(WORLD_SESSION_STATE_CREATED),
     m_requestSocket(nullptr) {}
@@ -102,7 +103,7 @@ WorldSession::~WorldSession()
 {
     ///- unload player if not unloaded
     if (_player)
-        LogoutPlayer(true);
+        LogoutPlayer();
 
     // marks this session as finalized in the socket which references (BUT DOES NOT OWN) it.
     // this lets the socket handling code know that the socket can be safely deleted
@@ -121,7 +122,6 @@ void WorldSession::SetOffline()
     {
         // friend status
         sSocialMgr.SendFriendStatus(_player, FRIEND_OFFLINE, _player->GetObjectGuid(), true);
-        _player->CleanupChannels();
         LogoutRequest(time(nullptr));
 
 		if (_player && _player->GetCombatData()) {
@@ -384,8 +384,8 @@ bool WorldSession::Update(PacketFilter& updater)
                 OpcodeHandler const& opHandle = opcodeTable[botpacket->GetOpcode()];
                 pBotWorldSession->ExecuteOpcode(opHandle, *botpacket);
             }
-            pBotWorldSession->m_recvQueue.clear();
         }
+        GetPlayer()->GetPlayerbotMgr()->RemoveBots();
     }
 #endif
 
@@ -404,6 +404,7 @@ bool WorldSession::Update(PacketFilter& updater)
 
                     m_Socket = m_requestSocket;
                     m_requestSocket = nullptr;
+                    sLog.outDetail("New Session key %s", m_Socket->GetSessionKey().AsHexStr());
                     SendAuthOk();
                 }
                 else
@@ -428,7 +429,7 @@ bool WorldSession::Update(PacketFilter& updater)
                 }
 
                 if (ShouldLogOut(time(nullptr)) && !m_playerLoading)   // check if delayed logout is fired
-                    LogoutPlayer(true);
+                    LogoutPlayer();
 
                 return true;
 
@@ -443,7 +444,7 @@ bool WorldSession::Update(PacketFilter& updater)
                     SetOffline();
                 }
                 else if (ShouldLogOut(time(nullptr)) && !m_playerLoading)   // check if delayed logout is fired
-                    LogoutPlayer(true);
+                    LogoutPlayer();
 
                 return true;
             }
@@ -452,7 +453,7 @@ bool WorldSession::Update(PacketFilter& updater)
             {
                 if (ShouldDisconnect(time(nullptr)))   // check if delayed logout is fired
                 {
-                    LogoutPlayer(true);
+                    LogoutPlayer();
                     if (!m_requestSocket && (!m_Socket || m_Socket->IsClosed()))
                         return false;
                 }
@@ -468,7 +469,7 @@ bool WorldSession::Update(PacketFilter& updater)
 }
 
 /// %Log the player out
-void WorldSession::LogoutPlayer(bool save)
+void WorldSession::LogoutPlayer()
 {
     // if the player has just logged out, there is no need to do anything here
     if (m_playerRecentlyLogout)
@@ -481,14 +482,13 @@ void WorldSession::LogoutPlayer(bool save)
         HandleMoveWorldportAckOpcode();
 
     m_playerLogout = true;
-    m_playerSave = save;
 
     if (_player)
     {
 #ifdef BUILD_PLAYERBOT
         // Log out all player bots owned by this toon
         if (_player->GetPlayerbotMgr())
-            _player->GetPlayerbotMgr()->LogoutAllBots();
+            _player->GetPlayerbotMgr()->LogoutAllBots(true);
 #endif
 
         sLog.outChar("Account: %d (IP: %s) Logout Character:[%s] (guid: %u)", GetAccountId(), GetRemoteAddress().c_str(), _player->GetName(), _player->GetGUIDLow());
@@ -511,7 +511,7 @@ void WorldSession::LogoutPlayer(bool save)
             _player->BuildPlayerRepop();
             _player->RepopAtGraveyard();
         }
-        else if (_player->isInCombat())
+        else if (_player->IsInCombat())
             _player->CombatStopWithPets(true, true);
 
         // drop a flag if player is carrying it
@@ -536,7 +536,7 @@ void WorldSession::LogoutPlayer(bool save)
             if (BattleGroundQueueTypeId bgQueueTypeId = _player->GetBattleGroundQueueTypeId(i))
             {
                 _player->RemoveBattleGroundQueueId(bgQueueTypeId);
-                sBattleGroundMgr.m_BattleGroundQueues[ bgQueueTypeId ].RemovePlayer(_player->GetObjectGuid(), true);
+                sBattleGroundMgr.m_battleGroundQueues[ bgQueueTypeId ].RemovePlayer(_player->GetObjectGuid(), true);
             }
         }
 
@@ -574,7 +574,7 @@ void WorldSession::LogoutPlayer(bool save)
 
         ///- empty buyback items and save the player in the database
         // some save parts only correctly work in case player present in map/player_lists (pets, etc)
-        if (save)
+        if (m_playerSave)
             _player->SaveToDB();
 
         ///- Leave all channels before player delete...
@@ -595,6 +595,9 @@ void WorldSession::LogoutPlayer(bool save)
         ///- Broadcast a logout message to the player's friends
         sSocialMgr.SendFriendStatus(_player, FRIEND_OFFLINE, _player->GetObjectGuid(), true);
         sSocialMgr.RemovePlayerSocial(_player->GetGUIDLow());
+
+        // GM ticket notification
+        sTicketMgr.OnPlayerOnlineState(*_player, false);
 
 #ifdef BUILD_PLAYERBOT
         // Remember player GUID for update SQL below
@@ -643,7 +646,6 @@ void WorldSession::LogoutPlayer(bool save)
     }
 
     m_playerLogout = false;
-    m_playerSave = false;
     m_playerRecentlyLogout = true;
 
     LogoutRequest(0);
@@ -652,11 +654,22 @@ void WorldSession::LogoutPlayer(bool save)
 /// Kick a player out of the World
 void WorldSession::KickPlayer()
 {
-    if (_player)
-        LogoutPlayer(false);
+#ifdef BUILD_PLAYERBOT
+    if (!_player)
+        return;
 
-    if (m_Socket && !m_Socket->IsClosed())
-        m_Socket->Close();
+    if (_player->GetPlayerbotAI())
+    {
+        auto master = _player->GetPlayerbotAI()->GetMaster();
+        auto botMgr = master->GetPlayerbotMgr();
+        if (botMgr)
+            botMgr->LogoutPlayerBot(_player->GetObjectGuid());
+    }
+    else
+        LogoutRequest(time(nullptr) - 20, false);
+#else
+    LogoutRequest(time(nullptr) - 20, false);
+#endif
 }
 
 void WorldSession::SendExpectedSpamRecords()
@@ -698,6 +711,16 @@ void WorldSession::SendMotd(Player* currChar)
     }
 
     DEBUG_LOG("WORLD: Sent motd (SMSG_MOTD)");
+}
+
+void WorldSession::SendOfflineNameQueryResponses()
+{
+    m_offlineNameQueries.clear();
+
+    for (auto& response : m_offlineNameResponses)
+        SendNameQueryResponse(response);
+
+    m_offlineNameResponses.clear();
 }
 
 void WorldSession::SendAreaTriggerMessage(const char* Text, ...) const

@@ -16,146 +16,145 @@
 
 /* ScriptData
 SDName: Boss_Huhuran
-SD%Complete: 90
-SDComment: Timed enrage NYI; Timers
+SD%Complete: 100
+SDComment:
 SDCategory: Temple of Ahn'Qiraj
 EndScriptData
 
 */
 
-#include "AI/ScriptDevAI/include/precompiled.h"
+#include "AI/ScriptDevAI/include/sc_common.h"
 #include "temple_of_ahnqiraj.h"
+#include "AI/ScriptDevAI/base/CombatAI.h"
+#include "Spells/Scripts/SpellScript.h"
 
 enum
 {
     EMOTE_GENERIC_FRENZY_KILL   = -1000001,
     EMOTE_GENERIC_BERSERK       = -1000004,
 
-    SPELL_ENRAGE                = 26051,        // triggers 26052
-    SPELL_BERSERK               = 26068,        // triggers 26052
+    SPELL_FRENZY                = 26051,        // triggers 26052 - Poison Bolt Volley (will hit the 15 closest people)
+    SPELL_BERSERK               = 26068,        // triggers 26052 - Poison Bolt Volley (will hit the 15 closest people)
     SPELL_NOXIOUS_POISON        = 26053,
-    SPELL_WYVERN_STING          = 26180,
+    SPELL_WYVERN_STING          = 26180,        // triggers 26233 on aura removal, doing 500 nature damage if 26180 expires (confirmed) and about 3K if dispelled early (amount unconfirmed)
+    SPELL_WYVERN_STING_DAMAGE   = 26233,
     SPELL_ACID_SPIT             = 26050
 };
 
-struct boss_huhuranAI : public ScriptedAI
+enum HuhuranActions
 {
-    boss_huhuranAI(Creature* pCreature) : ScriptedAI(pCreature)
+    HUHURAN_BERSERK,
+    HUHURAN_BERSERK_HP_CHECK,
+    HUHURAN_FRENZY,
+    HUHURAN_SPIT,
+    HUHURAN_NOXIOUS_POISON,
+    HUHURAN_WYVERN,
+    HUHURAN_ACTION_MAX,
+};
+
+struct boss_huhuranAI : public CombatAI
+{
+    boss_huhuranAI(Creature* creature) : CombatAI(creature, HUHURAN_ACTION_MAX), m_instance(static_cast<ScriptedInstance*>(creature->GetInstanceData()))
     {
-        m_pInstance = (ScriptedInstance*)pCreature->GetInstanceData();
-        Reset();
+        AddTimerlessCombatAction(HUHURAN_BERSERK_HP_CHECK, true);
+        AddCombatAction(HUHURAN_BERSERK, 5u * MINUTE * IN_MILLISECONDS);
+        AddCombatAction(HUHURAN_FRENZY, 25000, 35000);
+        AddCombatAction(HUHURAN_SPIT, 8u * IN_MILLISECONDS);
+        AddCombatAction(HUHURAN_NOXIOUS_POISON, 10000, 20000);
+        AddCombatAction(HUHURAN_WYVERN, 35000, 45000);
     }
 
-    ScriptedInstance* m_pInstance;
+    ScriptedInstance* m_instance;
 
-    uint32 m_uiFrenzyTimer;
-    uint32 m_uiWyvernTimer;
-    uint32 m_uiSpitTimer;
-    uint32 m_uiNoxiousPoisonTimer;
-
-    bool m_bIsBerserk;
-
-    void Reset() override
+    void Aggro(Unit* /*who*/) override
     {
-        m_uiFrenzyTimer         = urand(25000, 35000);
-        m_uiWyvernTimer         = urand(18000, 28000);
-        m_uiSpitTimer           = 8000;
-        m_uiNoxiousPoisonTimer  = urand(10000, 20000);
-        m_bIsBerserk            = false;
-    }
-
-    void Aggro(Unit* /*pWho*/) override
-    {
-        if (m_pInstance)
-            m_pInstance->SetData(TYPE_HUHURAN, IN_PROGRESS);
+        if (m_instance)
+            m_instance->SetData(TYPE_HUHURAN, IN_PROGRESS);
     }
 
     void JustReachedHome() override
     {
-        if (m_pInstance)
-            m_pInstance->SetData(TYPE_HUHURAN, FAIL);
+        if (m_instance)
+            m_instance->SetData(TYPE_HUHURAN, FAIL);
     }
 
-    void JustDied(Unit* /*pKiller*/) override
+    void JustDied(Unit* /*killer*/) override
     {
-        if (m_pInstance)
-            m_pInstance->SetData(TYPE_HUHURAN, DONE);
+        if (m_instance)
+            m_instance->SetData(TYPE_HUHURAN, DONE);
     }
 
-    void UpdateAI(const uint32 uiDiff) override
+    void ExecuteAction(uint32 action) override
     {
-        // Return since we have no target
-        if (!m_creature->SelectHostileTarget() || !m_creature->getVictim())
-            return;
-
-        // Frenzy_Timer
-        if (!m_bIsBerserk)
+        switch (action)
         {
-            if (m_uiFrenzyTimer < uiDiff)
+            case HUHURAN_BERSERK_HP_CHECK:
+                if (m_creature->GetHealthPercent() > 30.0f)
+                    return;
+            case HUHURAN_BERSERK:
             {
-                if (DoCastSpellIfCan(m_creature, SPELL_ENRAGE) == CAST_OK)
+                if (DoCastSpellIfCan(nullptr, SPELL_BERSERK) == CAST_OK)
+                {
+                    DoScriptText(EMOTE_GENERIC_BERSERK, m_creature);
+                    SetActionReadyStatus(HUHURAN_BERSERK_HP_CHECK, false);
+                    DisableCombatAction(HUHURAN_BERSERK);
+                    DisableCombatAction(HUHURAN_FRENZY);
+                }
+                break;
+            }
+            case HUHURAN_FRENZY:
+            {
+                if (DoCastSpellIfCan(nullptr, SPELL_FRENZY) == CAST_OK)
                 {
                     DoScriptText(EMOTE_GENERIC_FRENZY_KILL, m_creature);
-                    m_uiFrenzyTimer = urand(25000, 35000);
+                    ResetCombatAction(action, urand(10, 20) * IN_MILLISECONDS);
                 }
+                break;
             }
-            else
-                m_uiFrenzyTimer -= uiDiff;
-        }
-
-        // Wyvern Timer
-        if (m_uiWyvernTimer < uiDiff)
-        {
-            if (Unit* pTarget = m_creature->SelectAttackingTarget(ATTACKING_TARGET_RANDOM, 0))
+            case HUHURAN_SPIT:
             {
-                if (DoCastSpellIfCan(pTarget, SPELL_WYVERN_STING) == CAST_OK)
-                    m_uiWyvernTimer = urand(15000, 32000);
+                if (DoCastSpellIfCan(m_creature->GetVictim(), SPELL_ACID_SPIT) == CAST_OK)
+                    ResetCombatAction(action, urand(5, 10) * IN_MILLISECONDS);
+                break;
             }
-        }
-        else
-            m_uiWyvernTimer -= uiDiff;
-
-        // Spit Timer
-        if (m_uiSpitTimer < uiDiff)
-        {
-            if (DoCastSpellIfCan(m_creature->getVictim(), SPELL_ACID_SPIT) == CAST_OK)
-                m_uiSpitTimer = urand(5000, 10000);
-        }
-        else
-            m_uiSpitTimer -= uiDiff;
-
-        // NoxiousPoison_Timer
-        if (m_uiNoxiousPoisonTimer < uiDiff)
-        {
-            if (DoCastSpellIfCan(m_creature->getVictim(), SPELL_NOXIOUS_POISON) == CAST_OK)
-                m_uiNoxiousPoisonTimer = urand(12000, 24000);
-        }
-        else
-            m_uiNoxiousPoisonTimer -= uiDiff;
-
-        // Berserk
-        if (!m_bIsBerserk && m_creature->GetHealthPercent() < 30.0f)
-        {
-            if (DoCastSpellIfCan(m_creature, SPELL_BERSERK) == CAST_OK)
+            case HUHURAN_NOXIOUS_POISON:
             {
-                DoScriptText(EMOTE_GENERIC_BERSERK, m_creature);
-                m_bIsBerserk = true;
+                if (Unit* target = m_creature->SelectAttackingTarget(ATTACKING_TARGET_RANDOM, 0, SPELL_NOXIOUS_POISON, SELECT_FLAG_PLAYER))
+                    if (DoCastSpellIfCan(target, SPELL_NOXIOUS_POISON) == CAST_OK)
+                        ResetCombatAction(action, urand(12, 24) * IN_MILLISECONDS);
+                break;
+            }
+            case HUHURAN_WYVERN:
+            {
+                if (DoCastSpellIfCan(nullptr, SPELL_WYVERN_STING) == CAST_OK)
+                    ResetCombatAction(action, urand(25, 35) * IN_MILLISECONDS);
+                break;
             }
         }
-
-        DoMeleeAttackIfReady();
     }
 };
 
-UnitAI* GetAI_boss_huhuran(Creature* pCreature)
+struct HuhuranWyvernSting : public AuraScript // TODO: Add spell script for filtering
 {
-    return new boss_huhuranAI(pCreature);
-}
+    void OnApply(Aura* aura, bool apply) const override
+    {
+        if (!apply)
+        {
+            if (Unit* caster = aura->GetCaster())
+            {
+                int32 natureDamage = (aura->GetRemoveMode() == AURA_REMOVE_BY_DISPEL) ? 3000 : 500;  // Deal 500 nature damage on spell expire but 3000 if dispelled
+                caster->CastCustomSpell(aura->GetTarget(), 26233, &natureDamage, nullptr, nullptr, TRIGGERED_OLD_TRIGGERED);
+            }
+        }
+    }
+};
 
 void AddSC_boss_huhuran()
 {
     Script* pNewScript = new Script;
     pNewScript->Name = "boss_huhuran";
-    pNewScript->GetAI = &GetAI_boss_huhuran;
+    pNewScript->GetAI = &GetNewAIInstance<boss_huhuranAI>;
     pNewScript->RegisterSelf();
+
+    RegisterAuraScript<HuhuranWyvernSting>("spell_huhuran_wyvern_string");
 }

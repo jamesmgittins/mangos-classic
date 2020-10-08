@@ -21,68 +21,91 @@
 
 #include "MovementGenerator.h"
 
-template<class T>
-class PointMovementGenerator
-    : public MovementGeneratorMedium< T, PointMovementGenerator<T> >
+class PointMovementGenerator : public MovementGenerator
 {
     public:
-        PointMovementGenerator(uint32 _id, float _x, float _y, float _z, bool _generatePath) :
-            id(_id), i_x(_x), i_y(_y), i_z(_z), m_generatePath(_generatePath) {}
+        PointMovementGenerator(uint32 id, float x, float y, float z, float o, bool generatePath, uint32 forcedMovement, float speed = 0) :
+            m_x(x), m_y(y), m_z(z), m_o(o), m_speed(speed), m_generatePath(generatePath), m_forcedMovement(forcedMovement), m_id(id), m_speedChanged(false) {}
+        PointMovementGenerator(uint32 id, float x, float y, float z, bool generatePath, uint32 forcedMovement, float speed = 0) :
+            PointMovementGenerator(id, x, y, z, 0, generatePath, forcedMovement, speed) {}
 
-        virtual void Initialize(T&);
-        void Finalize(T&);
-        void Interrupt(T&);
-        void Reset(T& unit);
-        bool Update(T&, const uint32& diff);
+        void Initialize(Unit& unit) override;
+        void Finalize(Unit& unit) override;
+        void Interrupt(Unit& unit) override;
+        void Reset(Unit& unit) override;
+        bool Update(Unit& unit, const uint32&/* diff*/) override;
 
-        void MovementInform(T&);
+        void UnitSpeedChanged() override { m_speedChanged = true; }
 
         MovementGeneratorType GetMovementGeneratorType() const override { return POINT_MOTION_TYPE; }
 
-        bool GetDestination(float& x, float& y, float& z) const { x = i_x; y = i_y; z = i_z; return true; }
-    private:
-        uint32 id;
-        float i_x, i_y, i_z;
+    protected:
+        virtual void Move(Unit& unit);
+        virtual void MovementInform(Unit& unit);
+
+    protected:
+        float m_x, m_y, m_z, m_o, m_speed;
         bool m_generatePath;
-};
+        uint32 m_forcedMovement;
 
-class AssistanceMovementGenerator
-    : public PointMovementGenerator<Creature>
-{
-    public:
-        AssistanceMovementGenerator(float _x, float _y, float _z) :
-            PointMovementGenerator<Creature>(0, _x, _y, _z, true) {}
-
-        MovementGeneratorType GetMovementGeneratorType() const override { return ASSISTANCE_MOTION_TYPE; }
-        void Initialize(Creature&) override;
-        void Finalize(Unit&) override;
-};
-
-// Does almost nothing - just doesn't allows previous movegen interrupt current effect. Can be reused for charge effect
-class EffectMovementGenerator : public MovementGenerator
-{
-    public:
-        explicit EffectMovementGenerator(uint32 Id) : m_Id(Id) {}
-        void Initialize(Unit&) override {}
-        void Finalize(Unit& unit) override;
-        void Interrupt(Unit&) override {}
-        void Reset(Unit&) override {}
-        bool Update(Unit& unit, const uint32&) override;
-        MovementGeneratorType GetMovementGeneratorType() const override { return EFFECT_MOTION_TYPE; }
     private:
-        uint32 m_Id;
+        uint32 m_id;
+        bool m_speedChanged;
 };
 
-class FlyOrLandMovementGenerator : public PointMovementGenerator<Creature>
+class RetreatMovementGenerator : public PointMovementGenerator
 {
     public:
-        FlyOrLandMovementGenerator(uint32 _id, float _x, float _y, float _z, bool liftOff) :
-            PointMovementGenerator<Creature>(_id, _x, _y, _z, false),
-            m_liftOff(liftOff) {}
+        RetreatMovementGenerator(float x, float y, float z, float o, uint32 delay) :
+            PointMovementGenerator(0, x, y, z, o, true, 0), m_delayTimer(delay), m_arrived(false) {}
 
         void Initialize(Unit& unit) override;
+        void Finalize(Unit& unit) override;
+        void Interrupt(Unit& unit) override;
+        void Reset(Unit& unit) override;
+        bool Update(Unit& unit, const uint32& diff) override;
+
+        MovementGeneratorType GetMovementGeneratorType() const override { return RETREAT_MOTION_TYPE; }
+
+    protected:
+        void MovementInform(Unit&) override {}
+
     private:
-        bool m_liftOff;
+        ShortTimeTracker m_delayTimer;
+        bool m_arrived;
+};
+
+class StayMovementGenerator : public PointMovementGenerator
+{
+    public:
+        StayMovementGenerator(float x, float y, float z, float o = 0) :
+            PointMovementGenerator(0, x, y, z, o, true, 0), m_arrived(false) {}
+
+        void Initialize(Unit& unit) override;
+        void Finalize(Unit& unit) override;
+        void Interrupt(Unit& unit) override;
+        bool Update(Unit& unit, const uint32& diff) override;
+
+        MovementGeneratorType GetMovementGeneratorType() const override { return RETREAT_MOTION_TYPE; }
+
+    protected:
+        void MovementInform(Unit&) override {}
+
+    private:
+        bool m_arrived;
+};
+
+class PointTOLMovementGenerator : public PointMovementGenerator
+{
+    public:
+        PointTOLMovementGenerator(uint32 id, float x, float y, float z, bool takeOff, uint32 forcedMovement, float speed = 0) :
+            PointMovementGenerator(id, x, y, z, false, forcedMovement, speed), m_takeOff(takeOff) {}
+
+    protected:
+        void Move(Unit& unit) override;
+
+    private:
+        bool m_takeOff;
 };
 
 #endif

@@ -29,6 +29,7 @@ class Player;
 class GameObject;
 class Creature;
 class WorldObject;
+class ChatHandler;
 
 enum InstanceConditionIDs                                   // Suggested values used with CONDITION_INSTANCE_SCRIPT for some generic uses
 {
@@ -67,7 +68,7 @@ class InstanceData
         void SaveToDB() const;
 
         // Called every map update
-        virtual void Update(uint32 /*diff*/) {}
+        virtual void Update(const uint32 /*diff*/) {}
 
         // This is to prevent players from entering during boss encounters.
         virtual bool IsEncounterInProgress() const { return false; };
@@ -89,6 +90,9 @@ class InstanceData
 
         // called on creature creation
         virtual void OnCreatureCreate(Creature* /*creature*/) {}
+
+        // called on creature spawn/respawn
+        virtual void OnCreatureRespawn(Creature* /*creature*/) {}
 
         // called on creature enter combat
         virtual void OnCreatureEnterCombat(Creature* /*creature*/) {}
@@ -138,6 +142,9 @@ class InstanceData
             data << int32(value);
             ++count;
         }
+
+        virtual void ShowChatCommands(ChatHandler* /*handler*/) {}
+        virtual void ExecuteChatCommand(ChatHandler* /*handler*/, char* /*args*/) {}
 };
 
 #endif

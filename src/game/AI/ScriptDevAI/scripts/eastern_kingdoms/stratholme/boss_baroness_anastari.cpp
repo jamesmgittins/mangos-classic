@@ -23,7 +23,7 @@ EndScriptData
 
 */
 
-#include "AI/ScriptDevAI/include/precompiled.h"
+#include "AI/ScriptDevAI/include/sc_common.h"
 
 enum
 {
@@ -81,7 +81,7 @@ struct boss_baroness_anastariAI : public ScriptedAI
 
                 // Check for possessed player
                 Player* pPlayer = m_creature->GetMap()->GetPlayer(m_possessedPlayer);
-                if (!pPlayer || !pPlayer->isAlive())
+                if (!pPlayer || !pPlayer->IsAlive())
                 {
                     m_creature->RemoveAurasDueToSpell(SPELL_POSSESS_INV);
                     m_uiPossessEndTimer = 0;
@@ -104,7 +104,7 @@ struct boss_baroness_anastariAI : public ScriptedAI
                 m_uiPossessEndTimer -= uiDiff;
         }
 
-        if (!m_creature->SelectHostileTarget() || !m_creature->getVictim())
+        if (!m_creature->SelectHostileTarget() || !m_creature->GetVictim())
             return;
 
         // BansheeWail

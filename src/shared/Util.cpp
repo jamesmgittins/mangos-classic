@@ -23,7 +23,6 @@
 
 #include <boost/asio.hpp>
 
-#include <random>
 #include <chrono>
 #include <cstdarg>
 
@@ -34,6 +33,11 @@ std::mt19937* initRand()
 }
 
 static MaNGOS::thread_local_ptr<std::mt19937> mtRand(&initRand);
+
+std::mt19937* GetRandomGenerator()
+{
+    return mtRand.get();
+}
 
 uint32 WorldTimer::m_iTime = 0;
 uint32 WorldTimer::m_iPrevTime = 0;
@@ -55,8 +59,9 @@ uint32 WorldTimer::tick()
 
 uint32 WorldTimer::getMSTime()
 {
-    static auto const start_time = std::chrono::system_clock::now();
-    return static_cast<uint32>((std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()) - std::chrono::duration_cast<std::chrono::milliseconds>(start_time.time_since_epoch())).count());
+    using namespace std::chrono;
+
+    return static_cast<uint32>(duration_cast<milliseconds>(steady_clock::now().time_since_epoch() - GetApplicationStartTime().time_since_epoch()).count());
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -74,8 +79,8 @@ uint32 urand(uint32 min, uint32 max)
 
 float frand(float min, float max)
 {
-    std::uniform_real_distribution<double> dist(min, max);
-    return float(dist(*mtRand.get()));
+    std::uniform_real_distribution<float> dist(min, max);
+    return dist(*mtRand.get());
 }
 
 int32 irand()
@@ -283,19 +288,6 @@ uint32 CreatePIDFile(const std::string& filename)
     return (uint32)pid;
 }
 
-size_t utf8length(std::string& utf8str)
-{
-    try
-    {
-        return utf8::distance(utf8str.c_str(), utf8str.c_str() + utf8str.size());
-    }
-    catch (const std::exception&)
-    {
-        utf8str = "";
-        return 0;
-    }
-}
-
 bool Utf8toWStr(const std::string& utf8str, std::wstring& wstr, size_t max_len)
 {
     if (utf8str.empty())
@@ -331,6 +323,47 @@ bool Utf8toWStr(const std::string& utf8str, std::wstring& wstr, size_t max_len)
     }
 
     return true;
+}
+
+size_t utf8length(std::string& utf8str)
+{
+    try
+    {
+        return utf8::distance(utf8str.c_str(), utf8str.c_str() + utf8str.size());
+    }
+    catch (const std::exception&)
+    {
+        utf8str = "";
+    }
+
+    return 0;
+}
+
+size_t utf8limit(std::string& utf8str, size_t bytes)
+{
+    if (utf8str.size() > bytes)
+    {
+        try
+        {
+            auto end = (utf8str.cbegin() + bytes);
+            auto itr = utf8::find_invalid(utf8str.cbegin(), end);
+
+            // Fix UTF8 if it was corrupted by bytes truncated
+            if (itr != end)
+                bytes = std::distance(utf8str.cbegin(), itr);
+
+            utf8str.resize(bytes);
+            utf8str.shrink_to_fit();
+
+            return bytes;
+        }
+        catch (const std::exception&)
+        {
+            utf8str = "";
+        }
+    }
+
+    return 0;
 }
 
 void utf8truncate(std::string& utf8str, size_t len)

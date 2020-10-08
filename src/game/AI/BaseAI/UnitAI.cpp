@@ -26,6 +26,7 @@
 #include "Grids/CellImpl.h"
 #include "Spells/SpellMgr.h"
 #include "World/World.h"
+#include <float.h>
 
 static_assert(MAXIMAL_AI_EVENT_EVENTAI <= 32, "Maximal 32 AI_EVENTs supported with EventAI");
 
@@ -41,7 +42,9 @@ UnitAI::UnitAI(Unit* unit) :
     m_meleeEnabled(true),
     m_reactState(REACT_AGGRESSIVE),
     m_combatScriptHappening(false),
-    m_currentAIOrder(ORDER_NONE)
+    m_currentAIOrder(ORDER_NONE),
+    m_selfRooted(false),
+    m_currentSpell(nullptr)
 {
 }
 
@@ -51,20 +54,24 @@ UnitAI::~UnitAI()
 
 void UnitAI::MoveInLineOfSight(Unit* who)
 {
-    if (!HasReactState(REACT_AGGRESSIVE))
+    if (GetReactState() < REACT_DEFENSIVE)
         return;
 
-    if (!m_unit->CanFly() && m_unit->GetDistanceZ(who) > CREATURE_Z_ATTACK_RANGE)
-        return;
+    if (!m_unit->CanFly() && who->IsFlying())
+        if (m_unit->GetDistanceZ(who) > (IsRangedUnit() ? CREATURE_Z_ATTACK_RANGE_RANGED : CREATURE_Z_ATTACK_RANGE_MELEE))
+            return;
 
-    if (m_unit->getVictim() && !m_unit->GetMap()->IsDungeon())
+    if (m_unit->GetVictim() && !m_unit->GetMap()->IsDungeon())
         return;
 
     if (m_unit->IsNeutralToAll())
         return;
 
-    if (who->GetObjectGuid().IsCreature() && who->isInCombat())
+    if (who->GetObjectGuid().IsCreature() && who->IsInCombat())
         CheckForHelp(who, m_unit, 10.0);
+
+    if (!HasReactState(REACT_AGGRESSIVE)) // mobs who are aggressive can still assist
+        return;
 
     if (!m_unit->CanInitiateAttack())
         return;
@@ -83,19 +90,26 @@ void UnitAI::MoveInLineOfSight(Unit* who)
 
 void UnitAI::EnterEvadeMode()
 {
+    ClearSelfRoot();
     m_unit->RemoveAllAurasOnEvade();
     m_unit->CombatStopWithPets(true);
 
     // only alive creatures that are not on transport can return to home position
-    if (GetReactState() != REACT_PASSIVE && m_unit->isAlive())
-        m_unit->GetMotionMaster()->MoveTargetedHome();
+    if (GetReactState() != REACT_PASSIVE && m_unit->IsAlive())
+    {
+        if (!m_unit->IsImmobilizedState()) // if still rooted after aura removal - permarooted
+            m_unit->GetMotionMaster()->MoveTargetedHome();
+        else
+            JustReachedHome();
+    }
+
 
     m_unit->TriggerEvadeEvents();
 }
 
 void UnitAI::AttackedBy(Unit* attacker)
 {
-    if (!m_unit->isInCombat() && !m_unit->getVictim())
+    if (!m_unit->IsInCombat() && !m_unit->GetVictim())
         AttackStart(attacker);
 }
 
@@ -126,30 +140,17 @@ CanCastResult UnitAI::CanCastSpell(Unit* target, const SpellEntry* spellInfo, bo
 
         if (!m_unit->IsSpellReady(*spellInfo))
             return CAST_FAIL_COOLDOWN;
+        
+        // already active next melee swing spell
+        if (IsNextMeleeSwingSpell(spellInfo))
+            if (Spell* autorepeatSpell = m_unit->GetCurrentSpell(CURRENT_AUTOREPEAT_SPELL))
+                if (autorepeatSpell->m_spellInfo->Id == spellInfo->Id)
+                    return CAST_FAIL_OTHER;
     }
-
-    if (const SpellRangeEntry* spellRange = sSpellRangeStore.LookupEntry(spellInfo->rangeIndex))
-    {
-        if (target && target != m_unit)
-        {
-            // pTarget is out of range of this spell (also done by Spell::CheckCast())
-            float distance = m_unit->GetDistance(target, true, spellInfo->rangeIndex == SPELL_RANGE_IDX_COMBAT ? DIST_CALC_COMBAT_REACH_WITH_MELEE : DIST_CALC_COMBAT_REACH);
-
-            if (distance > spellRange->maxRange)
-                return CAST_FAIL_TOO_FAR;
-
-            float minRange = spellRange->minRange;
-
-            if (minRange && distance < minRange)
-                return CAST_FAIL_TOO_CLOSE;
-        }
-
-        return CAST_OK;
-    }
-    return CAST_FAIL_OTHER;
+    return CAST_OK;
 }
 
-CanCastResult UnitAI::DoCastSpellIfCan(Unit* target, uint32 spellId, uint32 castFlags, ObjectGuid originalCasterGUID) const
+CanCastResult UnitAI::DoCastSpellIfCan(Unit* target, uint32 spellId, uint32 castFlags)
 {
     Unit* caster = m_unit;
 
@@ -197,10 +198,6 @@ CanCastResult UnitAI::DoCastSpellIfCan(Unit* target, uint32 spellId, uint32 cast
             if (castFlags & CAST_INTERRUPT_PREVIOUS && caster->IsNonMeleeSpellCasted(false))
                 caster->InterruptNonMeleeSpells(false);
 
-            // Creature should always stop before it will cast a non-instant spell
-            if (GetSpellCastTime(spellInfo) || (IsChanneledSpell(spellInfo) && spellInfo->ChannelInterruptFlags & CHANNEL_FLAG_MOVEMENT))
-                caster->StopMoving();
-
             // Creature should interrupt any current melee spell
             caster->InterruptSpell(CURRENT_MELEE_SPELL);
 
@@ -212,9 +209,16 @@ CanCastResult UnitAI::DoCastSpellIfCan(Unit* target, uint32 spellId, uint32 cast
             if (flags == TRIGGERED_NONE)
                 flags |= TRIGGERED_NORMAL_COMBAT_CAST;
 
-            SpellCastResult result = caster->CastSpell(target, spellInfo, flags, nullptr, nullptr, originalCasterGUID);
+            SpellCastResult result = caster->CastSpell(target, spellInfo, flags);
             if (result != SPELL_CAST_OK)
             {
+                switch (result) // temporary adapter
+                {
+                    case SPELL_FAILED_OUT_OF_RANGE:
+                        return CAST_FAIL_TOO_FAR;
+                    case SPELL_FAILED_TOO_CLOSE:
+                        return CAST_FAIL_TOO_CLOSE;
+                }
                 sLog.outBasic("DoCastSpellIfCan by %s attempt to cast spell %u but spell failed due to unknown result %u.", m_unit->GetObjectGuid().GetString().c_str(), spellId, result);
                 return CAST_FAIL_OTHER;
             }
@@ -233,10 +237,7 @@ void UnitAI::AttackStart(Unit* who)
 
     if (m_unit->Attack(who, m_meleeEnabled))
     {
-        m_unit->AddThreat(who);
-        m_unit->SetInCombatWith(who);
-        who->SetInCombatWith(m_unit);
-
+        m_unit->EngageInCombatWith(who);
         HandleMovementOnAttackStart(who);
     }
 }
@@ -253,12 +254,12 @@ void UnitAI::SetCombatMovement(bool enable, bool stopOrStartMovement /*=false*/)
     else
         m_unit->addUnitState(UNIT_STAT_NO_COMBAT_MOVEMENT);
 
-    if (stopOrStartMovement && m_unit->getVictim())     // Only change current movement while in combat
+    if (stopOrStartMovement && m_unit->GetVictim())     // Only change current movement while in combat
     {
-        if (!m_unit->IsIncapacitated())
+        if (!m_unit->IsCrowdControlled())
         {
             if (enable)
-                DoStartMovement(m_unit->getVictim());
+                DoStartMovement(m_unit->GetVictim());
             else if (m_unit->GetMotionMaster()->GetCurrentMovementGeneratorType() == CHASE_MOTION_TYPE)
                 m_unit->StopMoving();
         }
@@ -290,10 +291,18 @@ void UnitAI::HandleMovementOnAttackStart(Unit* victim) const
     }
 }
 
-void UnitAI::OnSpellCastStateChange(SpellEntry const* spellInfo, bool state, WorldObject* target)
+void UnitAI::OnSpellCastStateChange(Spell const* spell, bool state, WorldObject* target)
 {
+    if (!state && spell != m_currentSpell)
+        return;
+
+    SpellEntry const* spellInfo = spell->m_spellInfo;
     if (spellInfo->HasAttribute(SPELL_ATTR_EX4_CAN_CAST_WHILE_CASTING) || spellInfo->HasAttribute(SPELL_ATTR_ON_NEXT_SWING_1) || spellInfo->HasAttribute(SPELL_ATTR_ON_NEXT_SWING_2))
         return;
+
+    // Creature should always stop before it will cast a non-instant spell
+    if ((spell->GetCastTime() && spellInfo->InterruptFlags & SPELL_INTERRUPT_FLAG_MOVEMENT) || (IsChanneledSpell(spellInfo) && spellInfo->ChannelInterruptFlags & CHANNEL_FLAG_MOVEMENT))
+        m_unit->StopMoving();
 
     bool forceTarget = false;
 
@@ -302,6 +311,7 @@ void UnitAI::OnSpellCastStateChange(SpellEntry const* spellInfo, bool state, Wor
     {
         case TARGET_ENUM_UNITS_ENEMY_IN_CONE_24: // ignores everything and keeps turning
             return;
+        case TARGET_UNIT_FRIEND:
         case TARGET_UNIT_ENEMY: forceTarget = true; break;
         case TARGET_UNIT_SCRIPT_NEAR_CASTER:
         default: break;
@@ -319,21 +329,31 @@ void UnitAI::OnSpellCastStateChange(SpellEntry const* spellInfo, bool state, Wor
         }
         else
         {
-            m_unit->SetFacingTo(m_unit->GetOrientation());
-            m_unit->SetTarget(nullptr);
+            if (m_unit->HasTarget())
+            {
+                m_unit->SetFacingTo(m_unit->GetOrientation());
+                m_unit->SetTarget(nullptr);
+            }
         }
     }
     else
     {
-        if (m_unit->getVictim())
-            m_unit->SetTarget(m_unit->getVictim());
+        if (m_unit->GetVictim() && !GetCombatScriptStatus())
+            m_unit->SetTarget(m_unit->GetVictim());
         else
             m_unit->SetTarget(nullptr);
     }
+
+    if (state)
+        m_currentSpell = spell;
 }
 
-void UnitAI::OnChannelStateChange(SpellEntry const* spellInfo, bool state, WorldObject* target)
+void UnitAI::OnChannelStateChange(Spell const* spell, bool state, WorldObject* target)
 {
+    if (state)
+        m_currentSpell = nullptr;
+
+    SpellEntry const* spellInfo = spell->m_spellInfo;
     // TODO: Determine if CHANNEL_FLAG_MOVEMENT is worth implementing
     if (!spellInfo->HasAttribute(SPELL_ATTR_EX_CHANNEL_TRACK_TARGET))
     {
@@ -375,8 +395,8 @@ void UnitAI::OnChannelStateChange(SpellEntry const* spellInfo, bool state, World
     }
     else
     {
-        if (m_unit->getVictim())
-            m_unit->SetTarget(m_unit->getVictim());
+        if (m_unit->GetVictim() && !GetCombatScriptStatus())
+            m_unit->SetTarget(m_unit->GetVictim());
         else
             m_unit->SetTarget(nullptr);
     }
@@ -389,7 +409,11 @@ void UnitAI::CheckForHelp(Unit* who, Unit* me, float distance)
     if (!victim)
         return;
 
-    if (me->isInCombat())
+    if (me->IsInCombat())
+        return;
+
+    // pulling happens once panic/retreating ends
+    if (who->hasUnitState(UNIT_STAT_PANIC | UNIT_STAT_RETREATING))
         return;
 
     if (me->GetMap()->Instanceable())
@@ -397,13 +421,13 @@ void UnitAI::CheckForHelp(Unit* who, Unit* me, float distance)
 
     if (me->CanInitiateAttack() && me->CanAttackOnSight(victim) && victim->isInAccessablePlaceFor(me))
     {
-        if (me->IsWithinDistInMap(who, distance) && me->IsWithinLOSInMap(who))
+        if (me->IsWithinDistInMap(who, distance) && me->IsWithinLOSInMap(who, true))
         {
             if (me->CanAssistInCombatAgainst(who, victim))
             {
                 AttackStart(victim);
                 if (who->AI() && who->AI()->GetAIOrder() == ORDER_FLEEING)
-                    who->GetMotionMaster()->InterruptFlee();
+                    who->GetMotionMaster()->InterruptPanic();
             }
         }
     }
@@ -412,20 +436,20 @@ void UnitAI::CheckForHelp(Unit* who, Unit* me, float distance)
 void UnitAI::DetectOrAttack(Unit* who)
 {
     float attackRadius = m_unit->GetAttackDistance(who);
-    if (!m_unit->IsWithinLOSInMap(who))
+    if (m_unit->GetDistance(who, true, DIST_CALC_NONE) > attackRadius * attackRadius)
         return;
 
-    if (!m_unit->IsWithinDistInMap(who, attackRadius))
+    if (!m_unit->IsWithinLOSInMap(who, true))
         return;
 
-    if (!m_unit->getVictim() && !m_unit->isInCombat())
+    if (!m_unit->GetVictim() && !m_unit->IsInCombat())
     {
         if (CanTriggerStealthAlert(who, attackRadius))
         {
             m_unit->SendAIReaction(AI_REACTION_ALERT);
             m_unit->SetFacingTo(m_unit->GetAngle(who));
             m_unit->GetMotionMaster()->MoveDistract(TIME_INTERVAL_LOOK);
-
+            OnStealthAlert(who);
             return;
         }
 
@@ -433,13 +457,11 @@ void UnitAI::DetectOrAttack(Unit* who)
     }
     else if (m_unit->GetMap()->IsDungeon())
     {
-        m_unit->AddThreat(who);
-        m_unit->SetInCombatWith(who);
-        who->SetInCombatWith(m_unit);
+        m_unit->EngageInCombatWith(who);
     }
 }
 
-bool UnitAI::CanTriggerStealthAlert(Unit* who, float attackRadius) const
+bool UnitAI::CanTriggerStealthAlert(Unit* who, float /*attackRadius*/) const
 {
     if (who->GetTypeId() != TYPEID_PLAYER)
         return false;
@@ -449,8 +471,7 @@ bool UnitAI::CanTriggerStealthAlert(Unit* who, float attackRadius) const
     if (m_unit->hasUnitState(UNIT_STAT_DISTRACTED))
         return false;
 
-    return who->HasStealthAura() &&
-        !m_unit->IsWithinDistInMap(who, who->GetVisibleDistance(m_unit));
+    return who->HasStealthAura() && m_unit->GetDistance(who, true, DIST_CALC_NONE) > who->GetVisibilityData().GetStealthVisibilityDistance(m_unit);
 }
 
 // ////////////////////////////////////////////////////////////////////////////////////////////////
@@ -485,7 +506,7 @@ class AiDelayEventAround : public BasicEvent
                     // Special case for type 0 (call-assistance)
                     if (m_eventType == AI_EVENT_CALL_ASSISTANCE)
                     {
-                        if (pReceiver->isInCombat() || !pInvoker)
+                        if (pReceiver->IsInCombat() || !pInvoker)
                             continue;
                         if (pReceiver->CanAssist(&m_owner) && pReceiver->CanAttackOnSight(pInvoker))
                         {
@@ -518,16 +539,15 @@ void UnitAI::SendAIEventAround(AIEventType eventType, Unit* invoker, uint32 dela
         CreatureList receiverList;
 
         // Allow sending custom AI events to all units in range
-        if (eventType >= AI_EVENT_CUSTOM_EVENTAI_A && eventType <= AI_EVENT_CUSTOM_EVENTAI_F && eventType != AI_EVENT_GOT_CCED)
+        if (eventType >= AI_EVENT_CUSTOM_EVENTAI_A && eventType <= AI_EVENT_CUSTOM_EVENTAI_F && eventType != AI_EVENT_GOT_CCED || eventType > AI_EVENT_START_ESCORT)
         {
             MaNGOS::AnyUnitInObjectRangeCheck u_check(m_unit, radius);
             MaNGOS::CreatureListSearcher<MaNGOS::AnyUnitInObjectRangeCheck> searcher(receiverList, u_check);
             Cell::VisitGridObjects(m_unit, searcher, radius);
         }
-        else
+        else // TODO: Expand functionality in future if needed
         {
-            // Use this check here to collect only assitable creatures in case of CALL_ASSISTANCE, else be less strict
-            MaNGOS::AnyAssistCreatureInRangeCheck u_check(m_unit, eventType == AI_EVENT_CALL_ASSISTANCE ? invoker : nullptr, radius);
+            MaNGOS::AnyAssistCreatureInRangeCheck u_check(m_unit, invoker, radius);
             MaNGOS::CreatureListSearcher<MaNGOS::AnyAssistCreatureInRangeCheck> searcher(receiverList, u_check);
             Cell::VisitGridObjects(m_unit, searcher, radius);
         }
@@ -573,9 +593,20 @@ Unit* UnitAI::DoSelectLowestHpFriendly(float range, float minMissing, bool perce
     return pUnit;
 }
 
+void UnitAI::DoResetThreat()
+{
+    if (!m_unit->CanHaveThreatList() || m_unit->getThreatManager().isThreatListEmpty())
+    {
+        script_error_log("DoResetThreat called for creature that either cannot have threat list or has empty threat list (m_creature entry = %d)", m_unit->GetEntry());
+        return;
+    }
+
+    m_unit->getThreatManager().modifyAllThreatPercent(-100);
+}
+
 bool UnitAI::CanExecuteCombatAction()
 {
-    return m_unit->CanReactInCombat() && !m_unit->hasUnitState(UNIT_STAT_DONT_TURN | UNIT_STAT_SEEKING_ASSISTANCE | UNIT_STAT_CHANNELING) && !m_unit->IsNonMeleeSpellCasted(false) && !m_combatScriptHappening;
+    return m_unit->CanReactInCombat() && !(m_unit->HasFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_SILENCED) && m_unit->HasFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_PACIFIED)) && !m_unit->hasUnitState(UNIT_STAT_PROPELLED | UNIT_STAT_RETREATING) && !m_unit->IsNonMeleeSpellCasted(false) && !m_combatScriptHappening;
 }
 
 void UnitAI::SetMeleeEnabled(bool state)
@@ -584,15 +615,15 @@ void UnitAI::SetMeleeEnabled(bool state)
         return;
 
     m_meleeEnabled = state;
-    if (m_unit->isInCombat())
+    if (m_unit->IsInCombat())
     {
         if (m_meleeEnabled)
         {
-            if (m_unit->getVictim())
-                m_unit->MeleeAttackStart(m_unit->getVictim());
+            if (m_unit->GetVictim())
+                m_unit->MeleeAttackStart(m_unit->GetVictim());
         }
         else
-            m_unit->MeleeAttackStop(m_unit->getVictim());
+            m_unit->MeleeAttackStop(m_unit->GetVictim());
     }
 }
 
@@ -602,35 +633,79 @@ void UnitAI::DoStartMovement(Unit* victim)
         m_unit->GetMotionMaster()->MoveChase(victim, m_attackDistance, m_attackAngle, m_moveFurther, !m_chaseRun);
 }
 
+SpellSchoolMask UnitAI::GetMainAttackSchoolMask() const
+{
+    return m_unit->GetMeleeDamageSchoolMask();
+}
+
 void UnitAI::TimedFleeingEnded()
 {
     if (GetAIOrder() != ORDER_FLEEING)
         return; // prevent stack overflow by cyclic calls - TODO: remove once Motion Master is human again
     SetAIOrder(ORDER_NONE);
     SetCombatScriptStatus(false);
-    if (!m_unit->isAlive())
+    if (!m_unit->IsAlive())
         return;
-    DoStartMovement(m_unit->getVictim());
+    DoStartMovement(m_unit->GetVictim());
 }
 
-void UnitAI::DoFlee()
+bool UnitAI::DoFlee()
 {
-    Unit* victim = m_unit->getVictim();
+    Unit* victim = m_unit->GetVictim();
     if (!victim)
-        return;
+        return false;
 
-    // first check if its not already feared somewhere else
-    if (m_unit->isFeared() || m_unit->hasUnitState(UNIT_STAT_FLEEING))
-        return;
-
-    // now we can call the fear method
-    m_unit->SetFeared(true, victim->GetObjectGuid(), 0, sWorld.getConfig(CONFIG_UINT32_CREATURE_FAMILY_FLEE_DELAY));
-
-    // check if fear method succeed
-    if (!m_unit->isFeared() && !m_unit->hasUnitState(UNIT_STAT_FLEEING))
-        return;
+    // call the fear method and check if fear method succeed
+    if (!m_unit->SetInPanic(sWorld.getConfig(CONFIG_UINT32_CREATURE_FAMILY_FLEE_DELAY)))
+        return false;
 
     // set the ai state to feared so it can reset movegen and ai state at the end of the fear
     SetAIOrder(ORDER_FLEEING);
     SetCombatScriptStatus(true);
+    return true;
+}
+
+void UnitAI::DistancingStarted()
+{
+    SetCombatScriptStatus(true);
+}
+
+void UnitAI::DistancingEnded()
+{
+    SetCombatScriptStatus(false);
+}
+
+void UnitAI::AttackClosestEnemy()
+{
+    Unit* closestEnemy = nullptr;
+    float distance = FLT_MAX;
+    ThreatList const& list = m_unit->getThreatManager().getThreatList();
+    for (auto& data : list)
+    {
+        Unit* enemy = data->getTarget();
+        float curDistance = enemy->GetDistance(m_unit, true, DIST_CALC_NONE);
+        if (!closestEnemy || curDistance < distance)
+        {
+            closestEnemy = enemy;
+            distance = curDistance;
+        }
+    }
+
+    AttackStart(closestEnemy);
+}
+
+void UnitAI::SetRootSelf(bool apply, bool combatOnly)
+{
+    if (combatOnly)
+        m_selfRooted = apply;
+    m_unit->SetImmobilizedState(apply);
+}
+
+void UnitAI::ClearSelfRoot()
+{
+    if (m_selfRooted)
+    {
+        m_unit->SetImmobilizedState(false);
+        m_selfRooted = false;
+    }
 }

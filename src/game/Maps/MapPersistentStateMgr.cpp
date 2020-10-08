@@ -193,9 +193,6 @@ void MapPersistentState::InitPools()
     }
 }
 
-//== WorldPersistentState functions ========================
-SpawnedPoolData WorldPersistentState::m_sharedSpawnedPoolData;
-
 bool WorldPersistentState::CanBeUnload() const
 {
     // prevent unload if used for loaded map
@@ -620,7 +617,7 @@ MapPersistentStateManager::~MapPersistentStateManager()
 - adding instance into manager
 - called from DungeonMap::Add, _LoadBoundInstances, LoadGroups
 */
-MapPersistentState* MapPersistentStateManager::AddPersistentState(MapEntry const* mapEntry, uint32 instanceId, time_t resetTime, bool canReset, bool load /*=false*/, bool initPools /*= true*/, uint32 completedEncountersMask /*= 0*/)
+MapPersistentState* MapPersistentStateManager::AddPersistentState(MapEntry const* mapEntry, uint32 instanceId, time_t resetTime, bool canReset, bool load /*=false*/, uint32 completedEncountersMask /*= 0*/)
 {
     if (MapPersistentState* old_save = GetPersistentState(mapEntry->MapID, instanceId))
         return old_save;
@@ -661,9 +658,6 @@ MapPersistentState* MapPersistentStateManager::AddPersistentState(MapEntry const
         m_instanceSaveByInstanceId[instanceId] = state;
     else
         m_instanceSaveByMapId[mapEntry->MapID] = state;
-
-    if (initPools)
-        state->InitPools();
 
     return state;
 }
@@ -761,7 +755,7 @@ void MapPersistentStateManager::CleanupInstances()
     CharacterDatabase.BeginTransaction();
     // clean character/group - instance binds with invalid group/characters
     _DelHelper(CharacterDatabase, "character_instance.guid, instance", "character_instance", "LEFT JOIN characters ON character_instance.guid = characters.guid WHERE characters.guid IS NULL");
-    _DelHelper(CharacterDatabase, "group_instance.leaderGuid, instance", "group_instance", "LEFT JOIN characters ON group_instance.leaderGuid = characters.guid LEFT JOIN groups ON group_instance.leaderGuid = groups.leaderGuid WHERE characters.guid IS NULL OR groups.leaderGuid IS NULL");
+    _DelHelper(CharacterDatabase, "group_instance.leaderGuid, instance", "group_instance", "LEFT JOIN characters ON group_instance.leaderGuid = characters.guid LEFT JOIN `groups` ON group_instance.leaderGuid = groups.leaderGuid WHERE characters.guid IS NULL OR groups.leaderGuid IS NULL");
 
     // clean instances that do not have any players or groups bound to them
     _DelHelper(CharacterDatabase, "id, map", "instance", "LEFT JOIN character_instance ON character_instance.instance = id LEFT JOIN group_instance ON group_instance.instance = id WHERE character_instance.instance IS NULL AND group_instance.instance IS NULL");
@@ -974,10 +968,7 @@ void MapPersistentStateManager::InitWorldMaps()
     for (uint32 mapid = 0; mapid < sMapStore.GetNumRows(); ++mapid)
         if (MapEntry const* entry = sMapStore.LookupEntry(mapid))
             if (!entry->Instanceable())
-                state = AddPersistentState(entry, 0, 0, false, true, false);
-
-    if (state)
-        state->InitPools();
+                state = AddPersistentState(entry, 0, 0, false, false);
 }
 
 void MapPersistentStateManager::LoadCreatureRespawnTimes()
@@ -1030,7 +1021,7 @@ void MapPersistentStateManager::LoadCreatureRespawnTimes()
                 continue;
         }
 
-        MapPersistentState* state = AddPersistentState(mapEntry, instanceId, resetTime, mapEntry->IsDungeon(), true, true, completedEncounters);
+        MapPersistentState* state = AddPersistentState(mapEntry, instanceId, resetTime, mapEntry->IsDungeon(), true, completedEncounters);
         if (!state)
             continue;
 
@@ -1098,7 +1089,7 @@ void MapPersistentStateManager::LoadGameobjectRespawnTimes()
                 continue;
         }
 
-        MapPersistentState* state = AddPersistentState(mapEntry, instanceId, resetTime, mapEntry->IsDungeon(), true, true, completedEncounters);
+        MapPersistentState* state = AddPersistentState(mapEntry, instanceId, resetTime, mapEntry->IsDungeon(), true, completedEncounters);
         if (!state)
             continue;
 

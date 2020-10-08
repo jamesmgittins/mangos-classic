@@ -69,6 +69,8 @@ namespace Movement
 
             MoveSplineFlag  splineflags;
 
+            float           speed;
+
             uint32          time_passed;
             int32           point_Idx;
             int32           point_Idx_offset;
@@ -118,12 +120,17 @@ namespace Movement
 
             uint32 GetId() const { return m_Id;}
             bool Finalized() const { return splineflags.done; }
-            bool isCyclic() const { return splineflags.cyclic;}
+            bool isCyclic() const { return splineflags.cyclic; }
+            FacingInfo const& GetFacing() const { return facing; }
+            bool isFacing() const { return splineflags.isFacing(); }
+            bool isFacingTarget() const { return splineflags.final_target; }
             const Vector3 FinalDestination() const { return Initialized() ? spline.getPoint(spline.last()) : Vector3();}
             const Vector3 CurrentDestination() const { return Initialized() ? spline.getPoint(point_Idx + 1) : Vector3();}
             int32 currentPathIdx() const;
 
             uint32 Duration() const { return spline.length();}
+
+            float Speed() const { return speed; }
 
             std::string ToString() const;
     };

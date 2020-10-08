@@ -28,10 +28,12 @@
 #include "Tools/Language.h"
 #include "BattleGround/BattleGroundMgr.h"
 #include <fstream>
+#include "Maps/MapManager.h"
 #include "Globals/ObjectMgr.h"
 #include "Entities/ObjectGuid.h"
 #include "Spells/SpellMgr.h"
 #include "AI/ScriptDevAI/ScriptDevAIMgr.h"
+#include "Maps/InstanceData.h"
 #include "Cinematics/M2Stores.h"
 
 bool ChatHandler::HandleDebugSendSpellFailCommand(char* args)
@@ -981,30 +983,29 @@ bool ChatHandler::HandlerDebugModValueHelper(Object* target, uint32 field, char*
             return false;
 
         uint32 value = target->GetUInt32Value(field);
-        const char* guidString = guid.GetString().c_str();
 
         switch (type)
         {
             default:
             case 1:                                         // int +
                 value = uint32(int32(value) + int32(iValue));
-                DEBUG_LOG(GetMangosString(LANG_CHANGE_INT32), guidString, field, iValue, value, value);
-                PSendSysMessage(LANG_CHANGE_INT32_FIELD, guidString, field, iValue, value, value);
+                DEBUG_LOG(GetMangosString(LANG_CHANGE_INT32), guid.GetString().c_str(), field, iValue, value, value);
+                PSendSysMessage(LANG_CHANGE_INT32_FIELD, guid.GetString().c_str(), field, iValue, value, value);
                 break;
             case 2:                                         // |= bit or
                 value |= iValue;
-                DEBUG_LOG(GetMangosString(LANG_CHANGE_HEX), guidString, field, typeStr, iValue, value);
-                PSendSysMessage(LANG_CHANGE_HEX_FIELD, guidString, field, typeStr, iValue, value);
+                DEBUG_LOG(GetMangosString(LANG_CHANGE_HEX), guid.GetString().c_str(), field, typeStr, iValue, value);
+                PSendSysMessage(LANG_CHANGE_HEX_FIELD, guid.GetString().c_str(), field, typeStr, iValue, value);
                 break;
             case 3:                                         // &= bit and
                 value &= iValue;
-                DEBUG_LOG(GetMangosString(LANG_CHANGE_HEX), guidString, field, typeStr, iValue, value);
-                PSendSysMessage(LANG_CHANGE_HEX_FIELD, guidString, field, typeStr, iValue, value);
+                DEBUG_LOG(GetMangosString(LANG_CHANGE_HEX), guid.GetString().c_str(), field, typeStr, iValue, value);
+                PSendSysMessage(LANG_CHANGE_HEX_FIELD, guid.GetString().c_str(), field, typeStr, iValue, value);
                 break;
             case 4:                                         // &=~ bit and not
                 value &= ~iValue;
-                DEBUG_LOG(GetMangosString(LANG_CHANGE_HEX), guidString, field, typeStr, iValue, value);
-                PSendSysMessage(LANG_CHANGE_HEX_FIELD, guidString, field, typeStr, iValue, value);
+                DEBUG_LOG(GetMangosString(LANG_CHANGE_HEX), guid.GetString().c_str(), field, typeStr, iValue, value);
+                PSendSysMessage(LANG_CHANGE_HEX_FIELD, guid.GetString().c_str(), field, typeStr, iValue, value);
                 break;
         }
 
@@ -1191,6 +1192,65 @@ bool ChatHandler::HandleDebugTaxiCommand(char* /*args*/)
     return true;
 }
 
+bool ChatHandler::HandleDebugMaps(char* /*args*/)
+{
+    PSendSysMessage("Update time statistics:");
+    PSendSysMessage("Map[0] >> Min: %ums, Max: %ums, Avg: %ums",
+        sMapMgr.GetMapUpdateMinTime(0), sMapMgr.GetMapUpdateMaxTime(0), sMapMgr.GetMapUpdateAvgTime(0));
+    PSendSysMessage("Map[1] >> Min: %ums, Max: %ums, Avg: %ums",
+        sMapMgr.GetMapUpdateMinTime(1), sMapMgr.GetMapUpdateMaxTime(1), sMapMgr.GetMapUpdateAvgTime(1));
+    PSendSysMessage("Map[530] >> Min: %ums, Max: %ums, Avg: %ums",
+        sMapMgr.GetMapUpdateMinTime(530), sMapMgr.GetMapUpdateMaxTime(530), sMapMgr.GetMapUpdateAvgTime(530));
+
+    if (m_session)
+    {
+        Player* player = m_session->GetPlayer();
+        if (!player)
+            return true;
+
+        if (player->GetMap()->IsContinent())
+            return true;
+
+        uint32 mapId = player->GetMap()->GetId();
+        uint32 instance = player->GetMap()->GetInstanceId();
+        PSendSysMessage("Instance update time statistics:");
+        PSendSysMessage("Map[%u] (Instance: %u) >> Min: %ums, Max: %ums, Avg: %ums",
+            mapId, instance, sMapMgr.GetMapUpdateMinTime(mapId, instance), sMapMgr.GetMapUpdateMaxTime(mapId, instance), sMapMgr.GetMapUpdateAvgTime(mapId, instance));
+    }
+
+    return true;
+}
+
+bool ChatHandler::HandleShowTemporarySpawnList(char* /*args*/)
+{
+    Player* pPlayer = m_session->GetPlayer();
+
+    std::map<uint32, uint32> temp_creature = pPlayer->GetMap()->GetTempCreatures();
+
+    SendSysMessage("Current temporary creatures in player map.");
+
+    for (std::map<uint32, uint32>::iterator it = temp_creature.begin(); it != temp_creature.end(); ++it)
+        PSendSysMessage("Entry: %u, Count: %u ", (*it).first, (*it).second);
+
+    std::map<uint32, uint32> temp_pet = pPlayer->GetMap()->GetTempPets();
+    SendSysMessage("Current temporary pets in player map.");
+
+    for (std::map<uint32, uint32>::iterator it = temp_pet.begin(); it != temp_pet.end(); ++it)
+        PSendSysMessage("Entry: %u, Count: %u ", (*it).first, (*it).second);
+
+    return true;
+}
+
+bool ChatHandler::HandleGridsLoadedCount(char* /*args*/)
+{
+    Player* player = m_session->GetPlayer();
+    if (!player)
+        return false;
+
+    PSendSysMessage("There are currently %u loaded grids.", player->GetMap()->GetLoadedGridsCount());
+    return true;
+}
+
 bool ChatHandler::HandleDebugWaypoint(char* args)
 {
     Creature* target = getSelectedCreature();
@@ -1268,13 +1328,33 @@ bool ChatHandler::HandleDebugSpellVisual(char* args)
     return true;
 }
 
-bool ChatHandler::HandleDebugMoveflags(char* args)
+bool ChatHandler::HandleDebugMoveflags(char* /*args*/)
 {
     Unit* target = getSelectedUnit();
     if (!target)
         return false;
 
     PSendSysMessage("Moveflags on target %u", target->m_movementInfo.GetMovementFlags());
+    return true;
+}
+
+bool ChatHandler::HandleSD2HelpCommand(char* /*args*/)
+{
+    Player* player = m_session->GetPlayer();
+    if (InstanceData* data = player->GetMap()->GetInstanceData())
+        data->ShowChatCommands(this);
+    else
+        PSendSysMessage("Map script does not support chat commands.");
+    return true;
+}
+
+bool ChatHandler::HandleSD2ScriptCommand(char* args)
+{
+    Player* player = m_session->GetPlayer();
+    if (InstanceData* data = player->GetMap()->GetInstanceData())
+        data->ExecuteChatCommand(this, args);
+    else
+        PSendSysMessage("Map script does not support chat commands.");
     return true;
 }
 
@@ -1371,12 +1451,144 @@ bool ChatHandler::HandleDebugSendWorldState(char* args)
     return true;
 }
 
+bool ChatHandler::HandleDebugHaveAtClientCommand(char* /*args*/)
+{
+    Player* player = m_session->GetPlayer();
+    Unit* target = getSelectedUnit();
+    if (!target)
+    {
+        SendSysMessage(LANG_SELECT_CHAR_OR_CREATURE);
+        return false;
+    }
 
-bool ChatHandler::HandleDebugOverflowCommand(char* args)
+    if (player->HaveAtClient(target))
+        PSendSysMessage("Target %s is at your client.", target->GetName());
+    else
+        PSendSysMessage("Target %s is not at your client.", target->GetName());
+
+    return true;
+}
+
+bool ChatHandler::HandleDebugIsVisibleCommand(char* /*args*/)
+{
+    Player* player = m_session->GetPlayer();
+    Unit* target = getSelectedUnit();
+    if (!target)
+    {
+        SendSysMessage(LANG_SELECT_CHAR_OR_CREATURE);
+        return false;
+    }
+
+    Camera& camera = player->GetCamera();
+    if (target->isVisibleForInState(player, camera.GetBody(), player->HaveAtClient(target)))
+        PSendSysMessage("Target %s should be visible at client.", target->GetName());
+    else
+        PSendSysMessage("Target %s should not be visible at client.", target->GetName());
+
+    return true;
+}
+
+bool ChatHandler::HandleDebugOverflowCommand(char* /*args*/)
 {
     std::string name("\360\222\214\245\360\222\221\243\360\222\221\251\360\223\213\215\360\223\213\210\360\223\211\241\360\222\214\245\360\222\221\243\360\222\221\251\360\223\213\215\360\223\213\210\360\223\211\241");
     // Overflow: \xd808\xdf25\xd809\xdc63\xd809\xdc69\xd80c\xdecd\xd80c\xdec8\xd80c\xde61\000\xdf25\xd809\xdc63
 
     normalizePlayerName(name);
+    return true;
+}
+
+bool ChatHandler::HandleDebugChatFreezeCommand(char* /*args*/)
+{
+    std::string message("| |01");
+
+    Player* player = m_session->GetPlayer();
+    player->Whisper(message, LANG_UNIVERSAL, player->GetObjectGuid());
+
+    return true;
+}
+
+bool ChatHandler::HandleDebugObjectFlags(char* args)
+{
+    char* debugCmd = ExtractLiteralArg(&args);
+    std::string debugCmdStr;
+    CMDebugCommandTableStruct const* foundCommand = nullptr;
+
+    if (debugCmd)
+    {
+        debugCmdStr = debugCmd;
+        uint32 bestMaches = 0;
+        for (std::vector < CMDebugCommandTableStruct>::const_iterator itr = CMDebugCommandTable.begin(); itr < CMDebugCommandTable.end(); ++itr)
+        {
+            CMDebugCommandTableStruct const* cmd = &*itr;
+            for (uint32 i = 0; i < debugCmdStr.length(); ++i)
+            {
+                if (i < cmd->command.length() && cmd->command[i] == debugCmdStr[i])
+                {
+                    if (bestMaches < i + 1)
+                    {
+                        bestMaches = i + 1;
+                        foundCommand = cmd;
+                    }
+                }
+                else
+                    break;
+            }
+            if (bestMaches == debugCmdStr.length())
+                break;
+        }
+    }
+
+    if (!debugCmd || !foundCommand)
+    {
+        if (debugCmd && !foundCommand)
+            PSendSysMessage("%s is not a valid command", debugCmdStr.c_str());
+
+        PSendSysMessage("Commands available...");
+
+        for (auto c : CMDebugCommandTable)
+            PSendSysMessage("%s > %s", c.command.c_str(), c.description.c_str());
+
+        PSendSysMessage("for all command if you dont specify on/off the flag will be toggled");
+        PSendSysMessage("ex: .debug debugobject intPoins on");
+        return false;
+    }
+
+    Unit* target = getSelectedUnit();
+    if (!target)
+    {
+        SendSysMessage(LANG_SELECT_CHAR_OR_CREATURE);
+        return false;
+    }
+
+    if (foundCommand->flag != CMDEBUGFLAG_NONE)
+    {
+        bool onOff = false;
+        if (!ExtractOnOff(&args, onOff))
+            onOff = !target->HaveDebugFlag(foundCommand->flag);
+
+        if (onOff)
+        {
+            PSendSysMessage("%s enabled for %s.", foundCommand->command.c_str(), target->GetGuidStr().c_str());
+            target->SetDebugFlag(foundCommand->flag);
+        }
+        else
+        {
+            PSendSysMessage("%s disabled for %s.", foundCommand->command.c_str(), target->GetGuidStr().c_str());
+            target->ClearDebugFlag(foundCommand->flag);
+        }
+    }
+    else
+    {
+        if (foundCommand->command == CMDebugCommandTable[0].command)
+        {
+            // clear all
+            target->ClearDebugFlag(CMDebugFlags(~CMDEBUGFLAG_NONE));
+        }
+        else if (foundCommand->command == CMDebugCommandTable[1].command)
+        {
+            // set all
+            target->SetDebugFlag(CMDebugFlags(~CMDEBUGFLAG_NONE));
+        }
+    }
     return true;
 }

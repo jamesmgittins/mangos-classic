@@ -412,6 +412,12 @@ void WorldSession::HandlePushQuestToParty(WorldPacket& recvPacket)
 
     DEBUG_LOG("WORLD: Received opcode CMSG_PUSHQUESTTOPARTY quest = %u", questId);
 
+    if (!_player->CanShareQuest(questId))
+    {
+        sLog.outError("Error in CMSG_PUSHQUESTTOPARTY - %s tried to share invalid quest (%u) (probably packet hacking)", _player->GetGuidStr().c_str(), questId);
+        return;
+    }
+
     if (Quest const* pQuest = sObjectMgr.GetQuestTemplate(questId))
     {
         if (Group* pGroup = _player->GetGroup())
@@ -622,7 +628,7 @@ bool WorldSession::CanInteractWithQuestGiver(ObjectGuid guid, char const* descr)
             return false;
         }
     }
-    else if (!_player->isAlive())
+    else if (!_player->IsAlive())
     {
         DEBUG_LOG("WORLD: %s - %s is dead, requested guid was %s", descr, _player->GetGuidStr().c_str(), guid.GetString().c_str());
         return false;

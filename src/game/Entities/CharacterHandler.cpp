@@ -34,6 +34,7 @@
 #include "Database/DatabaseImpl.h"
 #include "Tools/PlayerDump.h"
 #include "Social/SocialMgr.h"
+#include "GMTickets/GMTicketMgr.h"
 #include "Util.h"
 #include "Tools/Language.h"
 #include "Chat/Chat.h"
@@ -83,6 +84,7 @@ bool LoginQueryHolder::Initialize()
     res &= SetPQuery(PLAYER_LOGIN_QUERY_LOADAURAS,           "SELECT caster_guid,item_guid,spell,stackcount,remaincharges,basepoints0,basepoints1,basepoints2,periodictime0,periodictime1,periodictime2,maxduration,remaintime,effIndexMask FROM character_aura WHERE guid = '%u'", m_guid.GetCounter());
     res &= SetPQuery(PLAYER_LOGIN_QUERY_LOADSPELLS,          "SELECT spell,active,disabled FROM character_spell WHERE guid = '%u'", m_guid.GetCounter());
     res &= SetPQuery(PLAYER_LOGIN_QUERY_LOADQUESTSTATUS,     "SELECT quest,status,rewarded,explored,timer,mobcount1,mobcount2,mobcount3,mobcount4,itemcount1,itemcount2,itemcount3,itemcount4 FROM character_queststatus WHERE guid = '%u'", m_guid.GetCounter());
+    res &= SetPQuery(PLAYER_LOGIN_QUERY_LOADWEEKLYQUESTSTATUS, "SELECT quest FROM character_queststatus_weekly WHERE guid = '%u'", m_guid.GetCounter());
     res &= SetPQuery(PLAYER_LOGIN_QUERY_LOADHONORCP,         "SELECT victim_type,victim,honor,date,type FROM character_honor_cp WHERE guid = '%u'", m_guid.GetCounter());
     res &= SetPQuery(PLAYER_LOGIN_QUERY_LOADREPUTATION,      "SELECT faction,standing,flags FROM character_reputation WHERE guid = '%u'", m_guid.GetCounter());
     res &= SetPQuery(PLAYER_LOGIN_QUERY_LOADINVENTORY,       "SELECT data,bag,slot,item,item_template FROM character_inventory JOIN item_instance ON character_inventory.item = item_instance.guid WHERE character_inventory.guid = '%u' ORDER BY bag,slot", m_guid.GetCounter());
@@ -376,7 +378,7 @@ void WorldSession::HandleCharCreateOpcode(WorldPacket& recv_data)
     SendPacket(data, true);
 
     const std::string& IP_str = GetRemoteAddress();
-    BASIC_LOG("Account: %d (IP: %s) Create Character:[%s] (guid: %u)", GetAccountId(), IP_str.c_str(), name.c_str(), pNewChar->GetGUIDLow());
+    DETAIL_LOG("Account: %d (IP: %s) Create Character:[%s] (guid: %u)", GetAccountId(), IP_str.c_str(), name.c_str(), pNewChar->GetGUIDLow());
     sLog.outChar("Account: %d (IP: %s) Create Character:[%s] (guid: %u)", GetAccountId(), IP_str.c_str(), name.c_str(), pNewChar->GetGUIDLow());
 
     delete pNewChar;                                        // created only to call SaveToDB()
@@ -478,6 +480,10 @@ void WorldSession::HandlePlayerLoginOpcode(WorldPacket& recv_data)
             while (_player && _player->IsBeingTeleportedFar())
                 HandleMoveWorldportAckOpcode();
 
+        // release loot on reconnect
+        if (Loot* loot = sLootMgr.GetLoot(_player))
+            loot->Release(_player);
+
         HandlePlayerReconnect();
         return;
     }
@@ -527,6 +533,8 @@ void WorldSession::HandlePlayerLogin(LoginQueryHolder* holder)
     SetPlayer(pCurrChar);
     m_playerLoading = true;
 
+    m_initialZoneUpdated = false;
+
     SetOnline();
 
     // "GetAccountId()==db stored account id" checked in LoadFromDB (prevent login not own character using cheating tools)
@@ -545,6 +553,8 @@ void WorldSession::HandlePlayerLogin(LoginQueryHolder* holder)
         return;
     }
 
+    Group* group = pCurrChar->GetGroup();
+
     WorldPacket data(SMSG_LOGIN_VERIFY_WORLD, 20);
     data << pCurrChar->GetMapId();
     data << pCurrChar->GetPositionX();
@@ -561,6 +571,8 @@ void WorldSession::HandlePlayerLogin(LoginQueryHolder* holder)
     // Send Spam records
     SendExpectedSpamRecords();
     SendMotd(pCurrChar);
+
+    SendOfflineNameQueryResponses();
 
     // QueryResult *result = CharacterDatabase.PQuery("SELECT guildid,rank FROM guild_member WHERE guid = '%u'",pCurrChar->GetGUIDLow());
     QueryResult* resultGuild = holder->GetResult(PLAYER_LOGIN_QUERY_LOADGUILD);
@@ -600,7 +612,7 @@ void WorldSession::HandlePlayerLogin(LoginQueryHolder* holder)
         }
     }
 
-    if (!pCurrChar->isAlive())
+    if (!pCurrChar->IsAlive())
         pCurrChar->SendCorpseReclaimDelay(true);
 
     pCurrChar->SendInitialPacketsBeforeAddToMap();
@@ -637,6 +649,10 @@ void WorldSession::HandlePlayerLogin(LoginQueryHolder* holder)
 
     sObjectAccessor.AddObject(pCurrChar);
     // DEBUG_LOG("Player %s added to Map.",pCurrChar->GetName());
+
+    if (group)
+        group->SendUpdateTo(pCurrChar);
+        
     pCurrChar->GetSocial()->SendFriendList();
     pCurrChar->GetSocial()->SendIgnoreList();
 
@@ -653,12 +669,15 @@ void WorldSession::HandlePlayerLogin(LoginQueryHolder* holder)
 
     pCurrChar->SetInGameTime(WorldTimer::getMSTime());
 
-    // announce group about member online (must be after add to player list to receive announce to self)
-    if (Group* group = pCurrChar->GetGroup())
+    // Send group member online status for other members
+    if (group)
         group->UpdatePlayerOnlineStatus(pCurrChar);
 
-    // friend status
+    // Send friend list online status for other players
     sSocialMgr.SendFriendStatus(pCurrChar, FRIEND_ONLINE, pCurrChar->GetObjectGuid(), true);
+
+    // GM ticket notifications
+    sTicketMgr.OnPlayerOnlineState(*pCurrChar, true);
 
     // Place character in world (and load zone) before some object loading
     pCurrChar->LoadCorpse();
@@ -731,7 +750,7 @@ void WorldSession::HandlePlayerLogin(LoginQueryHolder* holder)
     sLog.outChar("Account: %d (IP: %s) Login Character:[%s] (guid: %u)",
                  GetAccountId(), IP_str.c_str(), pCurrChar->GetName(), pCurrChar->GetGUIDLow());
 
-    if (!pCurrChar->IsStandState() && !pCurrChar->hasUnitState(UNIT_STAT_STUNNED))
+    if (!pCurrChar->IsStandState() && !pCurrChar->IsStunned())
         pCurrChar->SetStandState(UNIT_STAND_STATE_STAND);
 
     m_playerLoading = false;
@@ -743,13 +762,20 @@ void WorldSession::HandlePlayerReconnect()
     // stop logout timer if need
     LogoutRequest(0);
 
+    // silently kick from chat channels player lists to allow reconnect correctly
+    _player->CleanupChannels();
+
     // set loading flag
     m_playerLoading = true;
 
     // reset all visible objects to be able to resend them
     _player->m_clientGUIDs.clear();
 
+    m_initialZoneUpdated = false;
+
     SetOnline();
+
+    Group* group = _player->GetGroup();
 
     WorldPacket data(SMSG_LOGIN_VERIFY_WORLD, 20);
     data << _player->GetMapId();
@@ -767,6 +793,8 @@ void WorldSession::HandlePlayerReconnect()
     // Send Spam records
     SendExpectedSpamRecords();
     SendMotd(_player);
+
+    SendOfflineNameQueryResponses();
 
     if (_player->GetGuildId() != 0)
     {
@@ -790,12 +818,15 @@ void WorldSession::HandlePlayerReconnect()
         }
     }
 
-    if (!_player->isAlive())
+    if (!_player->IsAlive())
         _player->SendCorpseReclaimDelay(true);
 
     _player->SendInitialPacketsBeforeAddToMap();
 
     _player->GetMap()->CreatePlayerOnClient(_player);
+
+    if (group)
+        group->SendUpdateTo(_player);
 
     _player->GetSocial()->SendFriendList();
     _player->GetSocial()->SendIgnoreList();
@@ -805,12 +836,11 @@ void WorldSession::HandlePlayerReconnect()
     _player->SendEnchantmentDurations();                             // must be after add to map
     _player->SendItemDurations();                                    // must be after add to map
 
-    // announce group about member online (must be after add to player list to receive announce to self)
-    if (Group* group = _player->GetGroup())
-        group->UpdatePlayerOnlineStatus(_player);
-
-    // friend status
+    // Send friend list online status for other players
     sSocialMgr.SendFriendStatus(_player, FRIEND_ONLINE, _player->GetObjectGuid(), true);
+
+    // GM ticket notifications
+    sTicketMgr.OnPlayerOnlineState(*_player, true);
 
     // show time before shutdown if shutdown planned.
     if (sWorld.IsShutdowning())
@@ -840,6 +870,12 @@ void WorldSession::HandlePlayerReconnect()
 
     // send mirror timers
     _player->SendMirrorTimers(true);
+
+    if (!_player->IsStandState() && !_player->IsStunned())
+        _player->SetStandState(UNIT_STAND_STATE_STAND);
+
+    // Undo flags and states set by logout if present:
+    _player->SetStunnedByLogout(false);
 
     m_playerLoading = false;
 }

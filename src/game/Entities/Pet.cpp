@@ -362,19 +362,14 @@ bool Pet::LoadPetFromDB(Player* owner, uint32 petentry /*= 0*/, uint32 petnumber
     savedhealth = savedhealth > GetMaxHealth() ? GetMaxHealth() : savedhealth;
     savedpower = savedpower > GetMaxPower(powerType) ? GetMaxPower(powerType) : savedpower;
 
-    if (getPetType() == SUMMON_PET)
-    {
-        savedhealth = GetMaxHealth();
-        savedpower = GetMaxPower(powerType);
-    }
-    else if (!savedhealth)
+    if (!savedhealth)
     {
         if (getPetType() == HUNTER_PET && healthPercentage)
         {
             savedhealth = GetMaxHealth() * (float(healthPercentage) / 100);
             savedpower = 0;
         }
-        else
+        else if (getPetType() != SUMMON_PET)
             return false;
     }
 
@@ -441,7 +436,7 @@ void Pet::SavePetToDB(PetSaveMode mode, Player* owner)
         if (mode == PET_SAVE_AS_CURRENT)
         {
             // pet is dead so it doesn't have to be shown at character login
-            if (!isAlive())
+            if (!IsAlive())
                 mode = PET_SAVE_NOT_IN_SLOT;
         }
         else
@@ -612,7 +607,7 @@ Player* Pet::GetSpellModOwner() const
 void Pet::SetDeathState(DeathState s)                       // overwrite virtual Creature::SetDeathState and Unit::SetDeathState
 {
     Creature::SetDeathState(s);
-    if (getDeathState() == CORPSE)
+    if (GetDeathState() == CORPSE)
     {
         // remove summoned pet (no corpse)
         if (getPetType() == SUMMON_PET)
@@ -632,7 +627,7 @@ void Pet::SetDeathState(DeathState s)                       // overwrite virtual
             SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_STUNNED);
         }
     }
-    else if (getDeathState() == ALIVE)
+    else if (GetDeathState() == ALIVE)
     {
         RemoveFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_STUNNED);
         CastPetAuras(true);
@@ -702,7 +697,7 @@ void Pet::RegenerateAll(uint32 update_diff)
     // regenerate focus
     if (m_regenTimer <= update_diff)
     {
-        if (!isInCombat())
+        if (!IsInCombat())
             RegenerateHealth();
 
         RegeneratePower();
@@ -738,7 +733,7 @@ void Pet::LoseHappiness()
     if (curValue <= 0)
         return;
     int32 addvalue = (140 >> GetLoyaltyLevel()) * 125;      // value is 70/35/17/8/4 (per min) * 1000 / 8 (timer 7.5 secs)
-    if (isInCombat())                                       // we know in combat happiness fades faster, multiplier guess
+    if (IsInCombat())                                       // we know in combat happiness fades faster, multiplier guess
         addvalue = int32(addvalue * 1.5);
     ModifyPower(POWER_HAPPINESS, -addvalue);
 }
@@ -817,10 +812,7 @@ void Pet::ModifyLoyalty(int32 addvalue)
                     }
                     case 2: // Stay + passive
                     {
-                        StopMoving();
                         AttackStop();
-                        GetMotionMaster()->Clear(false);
-                        GetMotionMaster()->MoveIdle();
                         charmInfo->SetCommandState(COMMAND_STAY);
                         AI()->SetReactState(ReactStates(REACT_PASSIVE));
                         SetModeFlags(PetModeFlags(AI()->GetReactState() | charmInfo->GetCommandState() * 0x100));
@@ -1004,7 +996,7 @@ void Pet::Unsummon(PetSaveMode mode, Unit* owner /*= nullptr*/)
     if (!owner)
         owner = GetOwner();
 
-    if (isInCombat())
+    if (IsInCombat())
         CombatStop(true);
 
     if (owner)
@@ -1089,7 +1081,7 @@ void Pet::GivePetXP(uint32 xp)
     if (xp < 1)
         return;
 
-    if (!isAlive())
+    if (!IsAlive())
         return;
 
     uint32 level = getLevel();
@@ -1351,69 +1343,8 @@ void Pet::InitStatsForLevel(uint32 petlevel)
         }
         case GUARDIAN_PET:
         {
-            // TODO: Remove cinfo->ArmorMultiplier test workaround to disable classlevelstats when DB is ready
-            CreatureClassLvlStats const* cCLS = sObjectMgr.GetCreatureClassLvlStats(petlevel, cInfo->UnitClass);
-            if (cInfo->ArmorMultiplier && cCLS && cInfo->Entry != 10697) // Info found in ClassLevelStats
-            {
-                health = cCLS->BaseHealth;
-                mana = cCLS->BaseMana;
-                armor = cCLS->BaseArmor;
-
-                // Melee
-                float minDmg = (cCLS->BaseDamage * cInfo->DamageVariance + (cCLS->BaseMeleeAttackPower / 14) * (cInfo->MeleeBaseAttackTime / 1000)) * cInfo->DamageMultiplier;
-
-                // Get custom setting
-                minDmg *= _GetDamageMod(cInfo->Rank, GetMap());
-
-                // If the damage value is not passed on as float it will result in damage = 1; but only for guardian type pets, though...
-                SetBaseWeaponDamage(BASE_ATTACK, MINDAMAGE, float(minDmg));
-                SetBaseWeaponDamage(BASE_ATTACK, MAXDAMAGE, float(minDmg * 1.5));
-
-                // Ranged
-                minDmg = (cCLS->BaseDamage * cInfo->DamageVariance + (cCLS->BaseRangedAttackPower / 14) * (cInfo->RangedBaseAttackTime / 1000)) * cInfo->DamageMultiplier;
-
-                // Get custom setting
-                minDmg *= _GetDamageMod(cInfo->Rank, GetMap());
-				
-                SetBaseWeaponDamage(RANGED_ATTACK, MINDAMAGE, float(minDmg));
-                SetBaseWeaponDamage(RANGED_ATTACK, MAXDAMAGE, float(minDmg * 1.5));
-            }
-            else // TODO: Remove fallback to creature_template data when DB is ready
-            {
-                if (petlevel >= cInfo->MaxLevel)
-                {
-                    health = cInfo->MaxLevelHealth;
-                    mana = cInfo->MaxLevelMana;
-                }
-                else if (petlevel <= cInfo->MinLevel)
-                {
-                    health = cInfo->MinLevelHealth;
-                    mana = cInfo->MinLevelMana;
-                }
-                else
-                {
-                    float hMinLevel = cInfo->MinLevelHealth / cInfo->MinLevel;
-                    float hMaxLevel = cInfo->MaxLevelHealth / cInfo->MaxLevel;
-                    float mMinLevel = cInfo->MinLevelMana / cInfo->MinLevel;
-                    float mMaxLevel = cInfo->MaxLevelMana / cInfo->MaxLevel;
-
-                    health = (hMaxLevel - ((hMaxLevel - hMinLevel) / 2)) * petlevel;
-                    mana = (mMaxLevel - ((mMaxLevel - mMinLevel) / 2)) * petlevel;
-                }
-				
-                sLog.outErrorDb("Pet::InitStatsForLevel> Error trying to set stats for creature %s (entry: %u) using ClassLevelStats; not enough data to do it!", GetGuidStr().c_str(), cInfo->Entry);
-
-                SetBaseWeaponDamage(BASE_ATTACK, MINDAMAGE, float(cInfo->MinMeleeDmg) * _GetDamageMod(cInfo->Rank, GetMap()));
-                SetBaseWeaponDamage(BASE_ATTACK, MAXDAMAGE, float(cInfo->MaxMeleeDmg) * _GetDamageMod(cInfo->Rank, GetMap()));
-
-                SetBaseWeaponDamage(RANGED_ATTACK, MINDAMAGE, float(cInfo->MinRangedDmg) * _GetDamageMod(cInfo->Rank, GetMap()));
-                SetBaseWeaponDamage(RANGED_ATTACK, MAXDAMAGE, float(cInfo->MaxRangedDmg) * _GetDamageMod(cInfo->Rank, GetMap()));
-            }
-
-			if (!GetOwner() || GetOwner()->GetTypeId() != TYPEID_PLAYER)
-				health *= _GetHealthMod(cInfo->Rank, GetMap());
-
-            break;
+            SelectLevel(petlevel);  // guardians reuse CLS function SelectLevel, so we stop here
+            return;
         }
         default:
             sLog.outError("Pet have incorrect type (%u) for level handling.", getPetType());
@@ -1441,7 +1372,7 @@ void Pet::InitStatsForLevel(uint32 petlevel)
     SetCreateHealth(health);
     SetCreateMana(mana);
     // Set base Armor
-    SetCreateResistance(SPELL_SCHOOL_NORMAL, int32(armor));
+    SetModifierValue(UNIT_MOD_ARMOR, BASE_VALUE, armor);
 
     // Need to update stats - calculates max health/mana etc
     UpdateAllStats();
@@ -1732,7 +1663,7 @@ void Pet::_LoadAuras(uint32 timediff)
                 if ((effIndexMask & (1 << i)) == 0)
                     continue;
 
-                Aura* aura = CreateAura(spellproto, SpellEffectIndex(i), nullptr, holder, this);
+                Aura* aura = CreateAura(spellproto, SpellEffectIndex(i), nullptr, nullptr, holder, this);
                 if (!damage[i])
                     damage[i] = aura->GetModifier()->m_amount;
 
@@ -2314,14 +2245,8 @@ void Pet::RegenerateHealth()
         case SUMMON_PET:
         case HUNTER_PET:
         {
-            float Spirit = GetStat(STAT_SPIRIT);
-
-            if (GetPower(POWER_MANA) > 0)
-                addvalue = uint32(Spirit * 0.25 * HealthIncreaseRate);
-            else
-                addvalue = uint32(Spirit * 0.80 * HealthIncreaseRate);
+            addvalue = OCTRegenHPPerSpirit() * HealthIncreaseRate * 4; // pets regen per 4 seconds
             break;
-
             // HACK: increase warlock pet regen *5 until formula is found
             if (m_petType == SUMMON_PET)
                 addvalue *= 5;

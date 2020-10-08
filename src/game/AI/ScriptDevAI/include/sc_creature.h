@@ -8,6 +8,8 @@
 #include "Chat/Chat.h"
 #include "Server/DBCStores.h"                               // Mostly only used the Lookup acces, but a few cases really do use the DBC-Stores
 #include "AI/BaseAI/CreatureAI.h"
+#include "Entities/EntitiesMgr.h"
+#include "Entities/Creature.h"
 
 // Spell targets used by SelectSpell
 enum SelectTarget
@@ -59,7 +61,7 @@ struct ScriptedAI : public CreatureAI
         // == Reactions At =================================
 
         // Called if IsVisible(Unit* pWho) is true at each relative pWho move
-        // void MoveInLineOfSight(Unit* pWho) override;
+        // void MoveInLineOfSight(Unit* who) override;
 
         // Called for reaction at enter to combat if not in combat yet (enemy can be nullptr)
         void EnterCombat(Unit* enemy) override;
@@ -181,9 +183,6 @@ struct ScriptedAI : public CreatureAI
         // Plays a sound to all nearby players
         void DoPlaySoundToSet(WorldObject* source, uint32 soundId);
 
-        // Drops all threat to 0%. Does not remove enemies from the threat list
-        void DoResetThreat();
-
         // Teleports a player without dropping threat (only teleports to same map)
         void DoTeleportPlayer(Unit* unit, float x, float y, float z, float ori);
 
@@ -223,9 +222,6 @@ struct Scripted_NoMovementAI : public ScriptedAI
     }
 
     void GetAIInformation(ChatHandler& reader) override;
-
-    // Called at each attack of m_creature by any victim
-    void AttackStart(Unit* who) override;
 };
 
 #endif

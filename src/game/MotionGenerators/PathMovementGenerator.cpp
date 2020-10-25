@@ -274,7 +274,7 @@ bool TaxiMovementGenerator::Move(Unit& unit)
     std::copy((m_spline.begin() + m_pathIndex), m_spline.end(), back_inserter(spline));
     init.SetFirstPointId(m_pathIndex);
     init.SetFly();
-    init.SetVelocity(TAXI_FLIGHT_SPEED);
+    init.SetVelocity(sWorld.getConfig(CONFIG_FLOAT_RATE_FLIGHT_PATH_SPEED));
     return bool(init.Launch());
 }
 

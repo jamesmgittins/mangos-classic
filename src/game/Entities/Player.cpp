@@ -2206,7 +2206,7 @@ void Player::RegenerateAll()
         return;
 	
     // Not in combat or they have regeneration
-    if (!isInCombat() || HasAuraType(SPELL_AURA_MOD_REGEN_DURING_COMBAT) ||
+    if (!IsInCombat() || HasAuraType(SPELL_AURA_MOD_REGEN_DURING_COMBAT) ||
             HasAuraType(SPELL_AURA_MOD_HEALTH_REGEN_IN_COMBAT) || sWorld.getConfig(CONFIG_BOOL_HEALTH_REGEN_IN_COMBAT) || GetParagonLevel() > 0)
     {
         RegenerateHealth();
@@ -2321,7 +2321,7 @@ void Player::RegenerateHealth()
 	if (curValue >= maxValue) {
 		if (!GetPet())
 			return;
-		if (GetPet()->GetHealth() >= GetPet()->GetMaxHealth() || !GetPet()->isAlive())
+		if (GetPet()->GetHealth() >= GetPet()->GetMaxHealth() || !GetPet()->IsAlive())
 			return;
 	}
 
@@ -2330,10 +2330,10 @@ void Player::RegenerateHealth()
     float addvalue = 0.0f;
 
     // normal regen case (maybe partly in combat case)
-    if (!isInCombat() || HasAuraType(SPELL_AURA_MOD_REGEN_DURING_COMBAT) || sWorld.getConfig(CONFIG_BOOL_HEALTH_REGEN_IN_COMBAT) || GetParagonLevel() > 0)
+    if (!IsInCombat() || HasAuraType(SPELL_AURA_MOD_REGEN_DURING_COMBAT) || sWorld.getConfig(CONFIG_BOOL_HEALTH_REGEN_IN_COMBAT) || GetParagonLevel() > 0)
     {
         addvalue = OCTRegenHPPerSpirit() * HealthIncreaseRate;
-        if (!isInCombat() || sWorld.getConfig(CONFIG_BOOL_HEALTH_REGEN_IN_COMBAT))
+        if (!IsInCombat() || sWorld.getConfig(CONFIG_BOOL_HEALTH_REGEN_IN_COMBAT))
         {
             AuraList const& mModHealthRegenPct = GetAurasByType(SPELL_AURA_MOD_HEALTH_REGEN_PERCENT);
             for (auto i : mModHealthRegenPct)
@@ -2363,7 +2363,7 @@ void Player::RegenerateHealth()
 	if (curValue >= maxValue) {
 		if (!GetPet())
 			return;
-		if (GetPet()->GetHealth() >= GetPet()->GetMaxHealth() || !GetPet()->isAlive())
+		if (GetPet()->GetHealth() >= GetPet()->GetMaxHealth() || !GetPet()->IsAlive())
 			return;
 
 		GetPet()->ModifyHealth(RandomRound(addvalue / 4));
@@ -2793,7 +2793,7 @@ void Player::GiveParagonLevel(uint32 level)
 	UpdateAllStats();
 
 	// set current level health and mana/energy to maximum after applying all mods.
-	if (isAlive())
+	if (IsAlive())
 		SetHealth(GetMaxHealth());
 	SetPower(POWER_MANA, GetMaxPower(POWER_MANA));
 	SetPower(POWER_ENERGY, GetMaxPower(POWER_ENERGY));
@@ -17857,7 +17857,7 @@ bool Player::CanJoinToBattleground() const
     if (GetDummyAura(26013))
         return false;
 
-	if (isDead())
+	if (IsDead())
 		return false;
 
     return true;

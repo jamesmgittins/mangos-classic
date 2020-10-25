@@ -596,7 +596,6 @@ void WorldSession::HandleMoverRelocation(MovementInfo& movementInfo)
                         plMover->BuildPlayerRepop();
                     }
                 }
-				*/
                 // cancel the death timer here if started
 				plMover->RepopAtGraveyard();
             }

@@ -824,8 +824,8 @@ uint32 Unit::DealDamage(Unit* dealer, Unit* victim, uint32 damage, CleanDamage c
     }
 
 	if (health <= damage) {
-		if (pVictim->GetTypeId() == TYPEID_PLAYER) {
-			((Player*)pVictim)->SetLastHitBy(GetName());
+		if (victim->GetTypeId() == TYPEID_PLAYER) {
+			((Player*)victim)->SetLastHitBy(dealer->GetName());
 		}
 		Kill(dealer, victim, damagetype, spellProto, durabilityLoss, duel_hasEnded);
 	}
@@ -1100,7 +1100,7 @@ void Unit::HandleDamageDealt(Unit* dealer, Unit* victim, uint32& damage, CleanDa
         MANGOS_ASSERT(he->duel);
 
         he->SetHealth(1);
-		CastSpell(this, 17624, TRIGGERED_OLD_TRIGGERED); // Petrification Potion
+		// Petrification Potion
 		he->CastSpell(he, 17624, TRIGGERED_OLD_TRIGGERED);
 
         he->duel->opponent->CombatStopWithPets(true);
@@ -2011,8 +2011,8 @@ void Unit::DealMeleeDamage(CalcDamageInfo* calcDamageInfo, bool durabilityLoss)
                 victim->SendMessageToSet(data, true);
 
                 DealDamage(victim, this, damage, nullptr, SPELL_DIRECT_DAMAGE, GetSpellSchoolMask(spellProto), spellProto, true);
-                if (pVictim->GetTypeId() == TYPEID_PLAYER) {
-                    ((Player*)pVictim)->HandleParagonLeech(damage);
+                if (victim->GetTypeId() == TYPEID_PLAYER) {
+                    ((Player*)victim)->HandleParagonLeech(damage);
                 }
                 i = vDamageShields.begin();
             }
@@ -6611,7 +6611,7 @@ uint32 Unit::SpellDamageBonusTaken(Unit* caster, SpellEntry const* spellProto, u
 				TakenTotalMod = 0.6f;
 		}
 
-		if (const Player * player = pCaster->GetControllingPlayer(true)) {
+		if (const Player * player = caster->GetControllingPlayer(true)) {
 			if (player->HasItemWithIdEquipped(DUNGEON_TRINKET_1, 1))
 				TakenTotalMod = 1.1f;
 			if (player->HasItemWithIdEquipped(DUNGEON_TRINKET_2, 1))
@@ -7245,24 +7245,24 @@ uint32 Unit::MeleeDamageBonusTaken(Unit* caster, uint32 pdamage, WeaponAttackTyp
 		if (const Player * player = GetControllingPlayer(true))
 		{
 			if (player->HasItemWithIdEquipped(DUNGEON_TRINKET_1, 1))
-				TakenPercent = 0.9f;
+				TakenTotalMod = 0.9f;
 			if (player->HasItemWithIdEquipped(DUNGEON_TRINKET_2, 1))
-				TakenPercent = 0.8f;
+				TakenTotalMod = 0.8f;
 			if (player->HasItemWithIdEquipped(DUNGEON_TRINKET_3, 1))
-				TakenPercent = 0.7f;
+				TakenTotalMod = 0.7f;
 			if (player->HasItemWithIdEquipped(DUNGEON_TRINKET_4, 1))
-				TakenPercent = 0.6f;
+				TakenTotalMod = 0.6f;
 		}
 
-		if (const Player * player = pCaster->GetControllingPlayer(true)) {
+		if (const Player * player = caster->GetControllingPlayer(true)) {
 			if (player->HasItemWithIdEquipped(DUNGEON_TRINKET_1, 1))
-				TakenPercent = 1.1f;
+				TakenTotalMod = 1.1f;
 			if (player->HasItemWithIdEquipped(DUNGEON_TRINKET_2, 1))
-				TakenPercent = 1.2f;
+				TakenTotalMod = 1.2f;
 			if (player->HasItemWithIdEquipped(DUNGEON_TRINKET_3, 1))
-				TakenPercent = 1.3f;
+				TakenTotalMod = 1.3f;
 			if (player->HasItemWithIdEquipped(DUNGEON_TRINKET_4, 1))
-				TakenPercent = 1.4f;
+				TakenTotalMod = 1.4f;
 		}
 	}
 

@@ -176,8 +176,10 @@ float VisibilityData::GetStealthVisibilityDistance(Unit const* target, bool aler
     float visibilityRange = float(detectionValue) * 0.3f + target->GetCombatReach();
 
     // If this unit is an NPC then player detect range doesn't apply
-    if (target->GetTypeId() == TYPEID_PLAYER && visibilityRange > MAX_PLAYER_STEALTH_DETECT_RANGE)
-        visibilityRange = MAX_PLAYER_STEALTH_DETECT_RANGE;
+	if (target->GetTypeId() == TYPEID_PLAYER && visibilityRange > MAX_PLAYER_STEALTH_DETECT_RANGE)
+		visibilityRange = MAX_PLAYER_STEALTH_DETECT_RANGE;
+	else
+		visibilityRange = 1;
 
     // When checking for alert state, look 8% further, and then 1.5 yards more than that.
     if (alert)

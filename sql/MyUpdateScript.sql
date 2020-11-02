@@ -1,5 +1,12 @@
 -- Fix for paladin level health
 UPDATE `classicmangos`.`player_classlevelstats` SET `basehp` = '30' WHERE (`class` = '2') and (`level` = '2');
+-- Fix for class quests
+UPDATE classicmangos.gameobject_template SET data8 = 2282 WHERE entry = 121264;
+UPDATE classicmangos.gameobject_template SET data8 = 2478 WHERE entry = 129127;
+UPDATE classicmangos.gameobject_template SET data8 = 2359 WHERE entry = 123214;
+UPDATE classicmangos.gameobject_template SET data8 = 1473 WHERE entry = 37098;
+UPDATE classicmangos.gameobject_template SET data8 = 1501 WHERE entry = 58595;
+UPDATE classicmangos.gameobject_template SET data8 = 2609 WHERE entry = 140911;
 -- Paragon Level Stuff
 CREATE TABLE classiccharacters.account_paragon(guid int(11) unsigned default 0,paragon_level int(11) unsigned default 0,paragon_xp int(11) unsigned default 0);
 INSERT INTO classicmangos.mangos_string (entry, content_default) VALUES (1700, 'Current Paragon level: %u');
